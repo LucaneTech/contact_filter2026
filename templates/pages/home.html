@@ -19,6 +19,8 @@
             {% csrf_token %}
             <button type="submit" class="bg-red-500 text-white p-2">Déconnexion</button>
         </form>
+
+        <span><a href="{% url 'news-year-archive' yearvar %}">Changer mot de passe</a></span>
         {% else %}
         <p>You are not logged in.</p>
         <a href="{% url 'login' %}" class="text-blue-500 hover:underline">Login</a>
