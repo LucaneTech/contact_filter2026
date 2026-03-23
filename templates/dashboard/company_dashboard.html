@@ -15,8 +15,8 @@
                 <span class="text-slate-500">|</span>
                 <span class="text-slate-400 text-sm">{{ company.name }}</span>
                 <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
-                    <button type="submit" class="text-slate-400 hover:text-red-400 text-sm font-medium">Déconnexion</button>
-                </form>
+                <button type="submit" class="text-white p-2 rounded-md duration-300 bg-red-500 hover:bg-red-400  cursor-pointer text-sm ">Déconnexion</button>
+            </form>
             </div>
         </div>
     </div>

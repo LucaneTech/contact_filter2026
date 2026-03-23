@@ -6,7 +6,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-@jjt)*4p=31s4%e!h6d1-btw(eeu^bg_yq84+c0@)o0l(%u&b!')
+SECRET_KEY = "django-insecure-@jjt)*4p=31s4%e!h6d1-btw(eeu^bg_yq84+c0@)o0l(%u&b!"
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -98,7 +98,7 @@ AUTHENTICATION_BACKENDS = ['apps.accounts.backends.EmailBackend']
 LOGIN_REDIRECT_URL = 'dashboard:company_dashboard'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 LOGIN_URL = 'accounts:login'
-
+PASSWORD_RESET_TIMEOUT = 3600
 # Static & Media
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'

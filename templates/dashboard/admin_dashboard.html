@@ -9,7 +9,7 @@
                 <span class="px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400">Admin</span>
             </a>
             <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
-                <button type="submit" class="text-slate-400 hover:text-red-400 text-sm font-medium">Déconnexion</button>
+                <button type="submit" class="text-white rounded-lg duration-300 bg-red-400 text-sm font-medium">Déconnexion</button>
             </form>
         </div>
     </div>
