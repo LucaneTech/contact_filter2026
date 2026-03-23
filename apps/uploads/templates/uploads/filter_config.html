@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Filtres - {{ upload.original_name }}{% endblock %}
+{% block nav %}
+<nav class="border-b border-slate-700/50 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+        <div class="flex justify-between h-14 items-center">
+            <a href="{% url 'dashboard:company_dashboard' %}" class="text-blue-400 hover:text-blue-300 font-medium">← Retour au dashboard</a>
+            <span class="text-slate-400 text-sm truncate max-w-[200px]">{{ upload.original_name }}</span>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8" x-data="filterBuilder()">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-slate-100">Configurer les filtres</h1>
+        <p class="text-slate-400 mt-1">Définissez les critères pour filtrer vos contacts avant traitement.</p>
+    </div>
+
+    <form method="post" @submit="serializeRules()">
+        {% csrf_token %}
+        <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-6 mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2">Combinaison des règles</label>
+            <select name="logic" x-model="logic" class="w-full max-w-xs rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-white">
+                <option value="AND">ET — Toutes les règles doivent être vraies</option>
+                <option value="OR">OU — Au moins une règle doit être vraie</option>
+            </select>
+        </div>
+
+        <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-slate-100">Règles de filtrage</h2>
+                <button type="button" @click="addRule()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Ajouter une règle
+                </button>
+            </div>
+            <p class="text-slate-500 text-sm mb-4">Exemples : code postal = 75001, ville contient Paris, téléphone non vide</p>
+
+            <template x-for="(rule, index) in rules" :key="index">
+                <div class="flex flex-wrap gap-2 items-end p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 mb-3">
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs text-slate-500 mb-1">Champ</label>
+                        <select x-model="rule.field" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">
+                            {% for key, label in filter_fields %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-xs text-slate-500 mb-1">Opérateur</label>
+                        <select x-model="rule.operator" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">
+                            <option value="equals">Égal à</option>
+                            <option value="not_equals">Différent de</option>
+                            <option value="contains">Contient</option>
+                            <option value="not_contains">Ne contient pas</option>
+                            <option value="startswith">Commence par</option>
+                            <option value="endswith">Finit par</option>
+                            <option value="in_list">Dans la liste (virgules)</option>
+                            <option value="is_empty">Est vide</option>
+                            <option value="not_empty">N'est pas vide</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[160px]" x-show="!['is_empty','not_empty'].includes(rule.operator)">
+                        <label class="block text-xs text-slate-500 mb-1">Valeur</label>
+                        <input type="text" x-model="rule.value" placeholder="75001 ou Paris, Lyon..."
+                            class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm placeholder-slate-500">
+                    </div>
+                    <button type="button" @click="removeRule(index)" class="p-2 rounded-lg text-red-400 hover:bg-red-900/30">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </template>
+
+            <p x-show="rules.length === 0" class="text-slate-500 text-sm py-6 text-center">Aucune règle. Cliquez "Ajouter une règle" pour filtrer par code postal, ville, etc. — ou lancez sans filtre.</p>
+        </div>
+
+        <input type="hidden" name="rules" :value="JSON.stringify(rules)">
+
+        <div class="flex gap-4">
+            <button type="submit" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all">
+                Lancer le traitement
+            </button>
+            <a href="{% url 'dashboard:company_dashboard' %}" class="px-6 py-3 rounded-xl border border-slate-600 text-slate-400 hover:bg-slate-800">Annuler</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function filterBuilder() {
+    return {
+        logic: 'AND',
+        rules: [],
+        addRule() {
+            this.rules.push({
+                field: '{% if filter_fields %}{{ filter_fields.0.0 }}{% else %}phone{% endif %}',
+                operator: 'equals',
+                value: ''
+            });
+        },
+        removeRule(i) {
+            this.rules.splice(i, 1);
+        },
+        serializeRules() {
+            document.querySelector('input[name="rules"]').value = JSON.stringify(this.rules);
+        }
+    };
+}
+</script>
+{% endblock %}

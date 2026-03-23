@@ -1,0 +1,40 @@
+{% load static tailwind_tags %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CallFilter Pro{% endblock %}</title>
+    {% tailwind_css %}
+    <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+    <script defer src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+    {% if messages %}
+    <div class="fixed top-4 right-4 z-50 space-y-2 animate-fade-in" x-data="{ show: true }" x-init="setTimeout(() => show = false, 5000)">
+        {% for message in messages %}
+        <div class="rounded-xl px-4 py-3 shadow-xl backdrop-blur-sm {% if message.tags == 'error' %}bg-red-900/90 text-red-100 border border-red-700/50{% elif message.tags == 'success' %}bg-emerald-900/90 text-emerald-100 border border-emerald-700/50{% else %}bg-slate-800/95 text-slate-100 border border-slate-700/50{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block body %}
+    <div class="flex flex-col min-h-screen">
+        {% block nav %}{% endblock %}
+        <main class="flex-1">
+            {% block content %}{% endblock %}
+        </main>
+        {% block footer %}{% endblock %}
+    </div>
+    {% endblock %}
+</body>
+</html>
