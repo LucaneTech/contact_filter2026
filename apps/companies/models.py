@@ -1,6 +1,3 @@
-"""
-Modèles multi-tenant : Company, UploadedFile, ProcessingHistory.
-"""
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -19,7 +16,7 @@ def company_export_path(instance, filename):
 
 
 class Company(models.Model):
-    """Centre d'appel client."""
+    """Call center """
     SUBSCRIPTION_CHOICES = [
         ('trial', 'Essai'),
         ('active', 'Actif'),
@@ -64,7 +61,6 @@ class Company(models.Model):
 
 
 class UploadedFile(models.Model):
-    """Fichier uploadé en attente/traitement/terminé."""
     STATUS_CHOICES = [
         ('pending', 'En attente'),
         ('processing', 'Traitement en cours'),
@@ -115,7 +111,6 @@ class UploadedFile(models.Model):
 
 
 class ProcessingHistory(models.Model):
-    """Historique des traitements (temporaire)."""
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,

@@ -1,6 +1,3 @@
-"""
-Moteur de filtrage dynamique et validation téléphonique.
-"""
 import re
 from typing import Any, Dict, List, Optional
 
