@@ -1,4 +1,4 @@
-"""Services d'export CSV/Excel."""
+"""Services d'export CSV/Excel/TXT."""
 import csv
 import io
 from pathlib import Path
@@ -20,11 +20,11 @@ def export_to_file(
     base_name: str,
     fmt: str = 'csv',
 ) -> tuple[str, str]:
-    """Exporte les lignes vers un fichier. Retourne (path, format)."""
     base = Path(base_name).stem
     date_str = timezone.now().strftime('%Y%m%d_%H%M')
     dir_path = f'exports/company_{company_id}/{timezone.now().strftime("%Y/%m/%d")}'
 
+    # Export Excel
     if fmt == 'excel' and HAS_PANDAS:
         filename = f'{dir_path}/{base}_{date_str}.xlsx'
         df = pd.DataFrame(rows)
@@ -34,7 +34,24 @@ def export_to_file(
         default_storage.save(filename, ContentFile(buffer.getvalue()))
         return filename, 'xlsx'
 
-    # CSV par défaut
+    # Export TXT (format tabulé)
+    if fmt == 'txt':
+        filename = f'{dir_path}/{base}_{date_str}.txt'
+        buffer = io.StringIO()
+        if rows:
+            # Écrire l'en-tête (noms des colonnes séparés par des tabulations)
+            headers = rows[0].keys()
+            buffer.write('\t'.join(headers) + '\n')
+            
+            # Écrire chaque ligne (valeurs séparées par des tabulations)
+            for row in rows:
+                values = [str(row.get(key, '')) for key in headers]
+                buffer.write('\t'.join(values) + '\n')
+        
+        default_storage.save(filename, ContentFile(buffer.getvalue().encode('utf-8-sig')))
+        return filename, 'txt'
+
+    # Export CSV par défaut
     filename = f'{dir_path}/{base}_{date_str}.csv'
     buffer = io.StringIO()
     if rows:
