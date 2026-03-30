@@ -1,21 +1,18 @@
-from celery import Celery
-from celery.schedules import crontab
 import os
 
+from celery import Celery
+
+# Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'contact_filter.settings')
 
 app = Celery('contact_filter')
+
 app.config_from_object('django.conf:settings', namespace='CELERY')
+
+# Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
-app.conf.beat_schedule = {
-    'cleanup-expired-files': {
-        'task': 'apps.processing.tasks_beat.cleanup_expired_files',
-        'schedule': crontab(hour=3, minute=0),
-    },
-}
 
-
-@app.task(bind=True)
+@app.task(bind=True, ignore_result=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')

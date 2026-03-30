@@ -11,12 +11,12 @@ from apps.companies.models import UploadedFile
 from apps.companies.decorators import company_required
 from .forms import UploadFileForm
 from .services import detect_columns, check_quota, auto_column_mapping
-
+from apps.processing.tasks import process_uploaded_file
+from django.conf import settings
 
 @login_required
 @company_required
 def upload_view(request):
-    """Upload - redirige vers config filtres."""
     company = request.company
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
@@ -51,7 +51,7 @@ def filter_config_view(request, upload_id):
 
     columns = upload.columns_detected or []
     mapping = upload.column_mapping or {}
-    # Champs pour le filtre = clés qui seront dans les lignes (mapped ou original)
+
     filter_fields = []
     for col in columns:
         std = mapping.get(col)
@@ -71,11 +71,10 @@ def filter_config_view(request, upload_id):
         upload.filters_config = {'logic': logic, 'rules': rules}
         upload.save()
         try:
-            from apps.processing.tasks import process_uploaded_file
-            from django.conf import settings
             if settings.CELERY_BROKER_URL and 'redis' in settings.CELERY_BROKER_URL:
                 process_uploaded_file.delay(upload.pk)
                 messages.success(request, f'Traitement lancé pour "{upload.original_name}".')
+                messages.info(request, 'Le traitement peut prendre quelques minutes. Vous recevrez une notification une fois terminé.')
             else:
                 process_uploaded_file(upload.pk)
                 messages.success(request, f'Fichier "{upload.original_name}" traité.')
@@ -89,7 +88,7 @@ def filter_config_view(request, upload_id):
     context = {
         'upload': upload,
         'columns': columns,
-        'filter_fields': filter_fields if filter_fields else [(c, c) for c in columns],
+        'filter_fields': filter_fields,
     }
     return render(request, 'uploads/filter_config.html', context)
 

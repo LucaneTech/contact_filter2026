@@ -34,7 +34,6 @@ def detect_columns(file: DjangoUploadedFile) -> list:
 
 
 def count_rows(file: DjangoUploadedFile) -> int:
-    """Compte le nombre de lignes (sans header)."""
     if not file:
         return 0
     filename = getattr(file, 'name', '').lower()
@@ -60,10 +59,10 @@ def auto_column_mapping(columns: list) -> dict:
         'email': ['email', 'mail', 'courriel'],
         'first_name': ['prenom', 'prénom', 'first', 'nom2'],
         'last_name': ['nom', 'name', 'nom1'],
-        'address': ['adresse', 'address', 'rue'],
-        'postal_code': ['cp', 'code postal', 'codepostal', 'zip'],
+        'address': ['adresse', 'address', 'rue', 'street', 'adress1', 'adress2'],
+        'postal_code': ['cp', 'code postal', 'codepostal', 'zip', 'postcode', 'CODE POSTAL', 'postal', 'POSTAL'],
         'city': ['ville', 'city', 'localité'],
-        'country': ['pays', 'country'],
+        'country': ['pays', 'country', 'region', 'région', 'nation'],
     }
     for col in columns:
         col_lower = str(col).strip().lower()

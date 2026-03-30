@@ -1,6 +1,4 @@
-"""
-Tâches Celery pour le traitement asynchrone des fichiers.
-"""
+
 from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta

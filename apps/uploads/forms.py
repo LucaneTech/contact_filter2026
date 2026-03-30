@@ -2,7 +2,6 @@ from django import forms
 
 
 class UploadFileForm(forms.Form):
-    """Formulaire d'upload de fichier."""
     file = forms.FileField(
         label='Fichier',
         widget=forms.FileInput(attrs={
@@ -30,7 +29,6 @@ class FilterRuleForm(forms.Form):
 
 
 class FilterConfigForm(forms.Form):
-    """Configuration des filtres - règles multiples."""
     logic = forms.ChoiceField(
         choices=[('AND', 'ET (toutes)'), ('OR', 'OU (au moins une)')],
         initial='AND'

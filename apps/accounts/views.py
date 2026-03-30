@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
 from .forms import EmailLoginForm
-
+from apps.companies.models import Company
 
 class CustomLoginView(LoginView):
     """Connexion par email."""
@@ -27,4 +27,13 @@ def login_view(request):
 
 @login_required
 def profile_view(request):
-    return render(request, 'accounts/profile.html', {'user': request.user})
+    user = request.user
+    company = Company.objects.filter(user=user).first()
+    if not company:
+        messages.warning(request, 'Aucune entreprise associée à votre compte. Veuillez contacter le support.')
+        return redirect('accounts:login')
+    context = {
+        'user': user,
+        'company': company,
+    }
+    return render(request, 'accounts/profile.html', context)

@@ -6,7 +6,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-@jjt)*4p=31s4%e!h6d1-btw(eeu^bg_yq84+c0@)o0l(%u&b!"
+SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -118,8 +118,8 @@ EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.Em
 # Celery
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
 
 # Stripe
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
@@ -130,4 +130,4 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Quota & expiration
-PROCESSING_EXPIRY_DAYS = 15
+PROCESSING_EXPIRY_DAYS = 2

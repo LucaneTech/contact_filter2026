@@ -37,10 +37,6 @@ def _numeric_compare(val: Any, target: Any, op) -> bool:
 
 
 def validate_phone(phone: str, default_region: str = 'FR') -> tuple[bool, str]:
-    """
-    Valide et normalise un numéro de téléphone.
-    Returns (is_valid, normalized_or_original).
-    """
     if not phone or not str(phone).strip():
         return False, ''
     raw = str(phone).strip()
@@ -127,10 +123,6 @@ def filter_and_score_rows(
     phone_field: str = 'phone',
     default_region: str = 'FR',
 ) -> tuple[List[Dict], int, int]:
-    """
-    Filtre les lignes, valide les téléphones, applique le scoring.
-    Returns (filtered_rows, valid_phone_count, invalid_count).
-    """
     filtered = []
     valid_phones = 0
     for row in rows:

@@ -38,7 +38,11 @@
             </div>
             <p class="text-2xl font-bold text-white">{{ quota_used }} <span class="text-slate-400 font-normal text-base">/ {{ quota_total }}</span></p>
             <div class="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500" style="width: {{ quota_percent }}%"></div>
+               <div class="w-full bg-gray-200 rounded-full h-4">
+                <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
+                    style="width: {{ quota_percent|default:0|floatformat:0 }}%;">
+                </div>
+                </div>
             </div>
         </div>
         <div class="rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-800/80 to-slate-900/80 p-6 backdrop-blur-sm hover:border-amber-500/30 transition-all duration-300">
@@ -82,7 +86,7 @@
                 <p class="text-slate-500 text-sm">Uploadez votre fichier, configurez les filtres puis lancez</p>
             </div>
         </div>
-        <form method="post" action="{% url 'uploads:upload' %}" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-start">
+        <form method="post" action="{% url 'uploads:upload' %}" enctype="multipart/form-data" class="flex flex-col  gap-4 items-start">
             {% csrf_token %}
             <div class="flex-1 w-full">
                 <label class="block w-full cursor-pointer rounded-xl border-2 border-dashed border-slate-600 hover:border-blue-500/50 bg-slate-800/50 p-6 transition-colors">
@@ -93,8 +97,9 @@
                     </span>
                 </label>
             </div>
-            <button type="submit" class="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all shadow-lg shadow-blue-500/20">
-                Importer et configurer
+           
+             <button type="submit" class="w-auto w-full px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all shadow-lg shadow-blue-500/20">
+                Suivant
             </button>
         </form>
     </div>

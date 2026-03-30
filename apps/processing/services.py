@@ -1,4 +1,3 @@
-"""Services de lecture des fichiers uploadés."""
 import csv
 import io
 from typing import List, Dict, Any

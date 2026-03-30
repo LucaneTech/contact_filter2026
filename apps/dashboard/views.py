@@ -1,4 +1,3 @@
-"""Vues des dashboards Entreprise et Admin."""
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
@@ -12,16 +11,14 @@ from apps.billing.models import Plan
 @login_required
 @company_required
 def company_dashboard(request):
-    """Dashboard entreprise : KPIs, upload, historique."""
     company = request.company
     uploads = company.uploads.select_related().order_by('-created_at')[:20]
     processings = company.processings.select_related().order_by('-created_at')[:15]
-
     quota_used = company.contacts_used_this_month
     quota_total = company.monthly_quota
     pending = company.uploads.filter(status__in=['pending', 'processing', 'cleaning', 'filtering']).count()
     ready_count = company.uploads.filter(status='ready').count()
-    total_valid = sum(p.rows_valid_phones for p in processings[:10])  # Approximation
+    total_valid = sum(p.rows_valid_phones for p in processings[:10]) 
     quota_remaining = max(0, quota_total - quota_used)
 
     context = {
@@ -43,7 +40,6 @@ def company_dashboard(request):
 @login_required
 @admin_required
 def admin_dashboard(request):
-    """Dashboard admin : liste entreprises, métriques."""
     companies = Company.objects.select_related('user', 'current_plan').order_by('-created_at')
     total_uploads = UploadedFile.objects.count()
     total_contacts = sum(c.contacts_used_this_month for c in Company.objects.all())
@@ -64,7 +60,7 @@ def admin_dashboard(request):
 @login_required
 @company_required
 def download_export(request, processing_id):
-    """Télécharge un fichier export."""
+    
     processing = get_object_or_404(
         ProcessingHistory,
         pk=processing_id,

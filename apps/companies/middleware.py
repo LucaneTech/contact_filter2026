@@ -1,6 +1,4 @@
-"""
-Middleware multi-tenant : injecte request.company pour les utilisateurs entreprise.
-"""
+
 from django.utils.deprecation import MiddlewareMixin
 
 
