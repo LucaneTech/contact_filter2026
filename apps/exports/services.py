@@ -1,4 +1,3 @@
-"""Services d'export CSV/Excel/TXT."""
 import csv
 import io
 from pathlib import Path
@@ -34,16 +33,16 @@ def export_to_file(
         default_storage.save(filename, ContentFile(buffer.getvalue()))
         return filename, 'xlsx'
 
-    # Export TXT (format tabulé)
+    # Export TXT
     if fmt == 'txt':
         filename = f'{dir_path}/{base}_{date_str}.txt'
         buffer = io.StringIO()
         if rows:
-            # Écrire l'en-tête (noms des colonnes séparés par des tabulations)
+            # headers = rows[0].keys() if rows else []
             headers = rows[0].keys()
             buffer.write('\t'.join(headers) + '\n')
             
-            # Écrire chaque ligne (valeurs séparées par des tabulations)
+            #writer csv with tab delimiter
             for row in rows:
                 values = [str(row.get(key, '')) for key in headers]
                 buffer.write('\t'.join(values) + '\n')
