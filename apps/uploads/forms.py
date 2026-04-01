@@ -12,7 +12,6 @@ class UploadFileForm(forms.Form):
 
 
 class FilterRuleForm(forms.Form):
-    """Une règle de filtre dynamique."""
     field = forms.CharField(max_length=100)
     operator = forms.ChoiceField(choices=[
         ('equals', 'Égal à'),

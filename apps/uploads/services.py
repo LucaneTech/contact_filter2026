@@ -1,4 +1,3 @@
-"""Services pour la détection des colonnes et vérification des quotas."""
 import csv
 import io
 from django.core.files.uploadedfile import UploadedFile as DjangoUploadedFile
@@ -9,7 +8,7 @@ try:
 except ImportError:
     HAS_PANDAS = False
 
-STANDARD_FIELDS = ['first_name', 'last_name', 'phone', 'email', 'address', 'postal_code', 'city', 'country']
+STANDARD_FIELDS = ['prenom', 'nom', 'tel', 'email', 'addresse', 'code_postal', 'ville', 'pays', 'age', 'sexe', 'habitation']
 
 
 def detect_columns(file: DjangoUploadedFile) -> list:
@@ -52,17 +51,19 @@ def count_rows(file: DjangoUploadedFile) -> int:
 
 
 def auto_column_mapping(columns: list) -> dict:
-    """Mapping automatique des colonnes vers les champs standard."""
     mapping = {}
     keywords = {
-        'phone': ['tel', 'phone', 'telephone', 'mobile', 'gsm', 'numéro', 'numero'],
+        'tel': ['tel', 'phone', 'telephone', 'mobile', 'gsm', 'numéro', 'numero'],
         'email': ['email', 'mail', 'courriel'],
-        'first_name': ['prenom', 'prénom', 'first', 'nom2'],
-        'last_name': ['nom', 'name', 'nom1'],
-        'address': ['adresse', 'address', 'rue', 'street', 'adress1', 'adress2'],
-        'postal_code': ['cp', 'code postal', 'codepostal', 'zip', 'postcode', 'CODE POSTAL', 'postal', 'POSTAL'],
-        'city': ['ville', 'city', 'localité'],
-        'country': ['pays', 'country', 'region', 'région', 'nation'],
+        'prenom': ['prenom', 'prénom', 'first', 'nom2','frstname', 'first_name'],
+        'nom': ['nom', 'name', 'nom1', 'lastname', 'last_name'],
+        'addresse': ['adresse', 'address', 'rue', 'street', 'adress1', 'adress2'],
+        'code_postal': ['cp', 'code postal', 'codepostal', 'zip', 'postcode', 'CODE POSTAL', 'postal', 'POSTAL'],
+        'ville': ['ville', 'city', 'localité'],
+        'pays': ['pays', 'country', 'region', 'région', 'nation'],
+        'age': ['age', 'âge', 'years', 'années'],
+        'sexe': ['sexe', 'gender', 'genre', 'sexe1', 'sexe1'],
+        'habitation': ['habitation', 'housing', 'logement', 'habitation1', 'habitation2'],
     }
     for col in columns:
         col_lower = str(col).strip().lower()
@@ -74,6 +75,5 @@ def auto_column_mapping(columns: list) -> dict:
 
 
 def check_quota(company, file) -> bool:
-    """Vérifie si la company a encore du quota pour ce fichier."""
     rows = count_rows(file)
     return company.quota_remaining >= rows

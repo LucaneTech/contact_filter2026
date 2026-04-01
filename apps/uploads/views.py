@@ -1,4 +1,3 @@
-"""Vues pour l'upload de fichiers."""
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
@@ -97,7 +96,6 @@ def filter_config_view(request, upload_id):
 @company_required
 @require_http_methods(['GET'])
 def upload_status_view(request, upload_id):
-    """Polling HTMX - statut d'un upload."""
     upload = get_object_or_404(UploadedFile, pk=upload_id, company=request.company)
     return JsonResponse({
         'status': upload.status,

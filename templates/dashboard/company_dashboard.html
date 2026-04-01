@@ -102,6 +102,14 @@
                 Suivant
             </button>
         </form>
+{% if uploaded_file %}
+<div class="mt-4 text-sm text-slate-400">
+    <p><strong>Fichier sélectionné :</strong> {{ uploaded_file.file.name }}</p>
+    <p><strong>Nom original :</strong> {{ uploaded_file.original_filename }}</p>
+    <p><strong>Statut :</strong> {{ uploaded_file.status }}</p>
+    <p><strong>Date d'upload :</strong> {{ uploaded_file.uploaded_at|date:"d/m/Y H:i" }}</p>
+</div>
+{% endif %}
     </div>
 
     <div class="grid lg:grid-cols-2 gap-8">

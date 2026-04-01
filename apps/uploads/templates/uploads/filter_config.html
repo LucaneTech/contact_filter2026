@@ -93,7 +93,7 @@ function filterBuilder() {
         rules: [],
         addRule() {
             this.rules.push({
-                field: '{% if filter_fields %}{{ filter_fields.0.0 }}{% else %}phone{% endif %}',
+                field: '{% if filter_fields %}{{ filter_fields.0.0 }}{% else %}tel{% endif %}',
                 operator: 'equals',
                 value: ''
             });
