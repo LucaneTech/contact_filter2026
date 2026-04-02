@@ -30,7 +30,7 @@ def upload_view(request):
                 company=company,
                 file=f,
                 original_name=f.name,
-                expires_at=timezone.now() + timedelta(days=15),
+                expires_at=timezone.now() + timedelta(days=settings.FILE_EXPIRATION_TIME),
                 columns_detected=columns,
                 column_mapping=mapping,
             )

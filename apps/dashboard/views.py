@@ -57,6 +57,24 @@ def admin_dashboard(request):
     return render(request, 'dashboard/admin_dashboard.html', context)
 
 
+#companies details view
+@login_required
+@admin_required
+def company_detail(request, company_id):
+    company = get_object_or_404(Company, pk=company_id)
+    uploads = company.uploads.select_related().order_by('-created_at')[:20]
+    processings = company.processings.select_related().order_by('-created_at')[:15]
+    pourcent_quota_left = min(100, (company.contacts_used_this_month / company.monthly_quota * 100) if company.monthly_quota else 0)
+    context = {
+        'company': company,
+        'uploads': uploads,
+        'processings': processings,
+        'pourcent_quota_left': pourcent_quota_left,
+    }
+    return render(request, 'dashboard/company_detail.html', context)
+
+
+
 import os
 import io
 import csv

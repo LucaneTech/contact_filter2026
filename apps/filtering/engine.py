@@ -52,7 +52,6 @@ def validate_phone(phone: str, default_region: str = 'FR') -> tuple[bool, str]:
 
 
 def get_phone_country(phone: str, default_region: str = 'FR') -> Optional[str]:
-    """Détecte le pays via l'indicatif téléphonique."""
     if not HAS_PHONENUMBERS or not phone:
         return None
     try:

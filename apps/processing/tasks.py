@@ -11,7 +11,7 @@ from .services import read_file_to_rows, get_standard_row
 
 @shared_task(bind=True)
 def process_uploaded_file(self, upload_id: int):
-    """Tâche principale : lire, filtrer, valider, scorer, exporter."""
+
     try:
         upload = UploadedFile.objects.get(pk=upload_id)
     except UploadedFile.DoesNotExist:

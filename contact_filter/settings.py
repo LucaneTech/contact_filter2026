@@ -130,4 +130,4 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Quota & expiration
-PROCESSING_EXPIRY_DAYS = 2
+FILE_EXPIRATION_TIME = 2

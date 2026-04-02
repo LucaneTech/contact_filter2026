@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - {{ company.name }}{% endblock %}
+{% block nav %}
+<nav class="border-b border-slate-700/50 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+            <a href="{% url 'dashboard:company_dashboard' %}" class="flex items-center gap-2 text-xl font-bold">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">CallFilter Pro</span>
+            </a>
+            <div class="flex items-center gap-6">
+              
+                <span class="text-slate-400 text-sm">{{ company.name }}</span>
+                <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+                <button type="submit" class="text-white p-2 rounded-md duration-300 bg-red-500 hover:bg-red-400  cursor-pointer text-sm ">Déconnexion</button>
+            </form>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+
+
+{% block content %}
+<div class="min-h-screen bg-slate-950 text-white p-6">
+
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <div class="flex items-center gap-4">
+            {% if company.logo %}
+                <img src="{{ company.logo.url }}" class="w-16 h-16 rounded-full object-cover border border-slate-700 shadow-lg">
+            {% else %}
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold shadow-lg">
+                    {{ company.name|slice:":1" }}
+                </div>
+            {% endif %}
+
+            <div>
+                <h1 class="text-2xl md:text-3xl text-blue-400 font-bold tracking-tight">{{ company.name }}</h1>
+                <p class="text-sm text-slate-400">
+                    Créée le {{ company.created_at|date:"d M Y " }}
+                </p>
+            </div>
+        </div>
+
+        
+
+        <!-- STATUS BADGE -->
+        <div>
+            <span class="
+                px-4 py-1 rounded-full text-sm font-medium
+                {% if company.subscription_status == 'active' %} bg-green-500/20 text-green-400
+                {% elif company.subscription_status == 'trial' %} bg-blue-500/20 text-blue-400
+                {% elif company.subscription_status == 'expired' %} bg-red-500/20 text-red-400
+                {% else %} bg-yellow-500/20 text-yellow-400 {% endif %}
+            ">
+                {{ company.subscription_status }}
+            </span>
+        </div>
+    </div>
+<div class="mb-10 flex justify-start">
+        <button class="text-sm px-4 py-2 rounded-md bg-blue-900/50 cursor-pointer hover:bg-blue-900/20 border border-blue-900/100 text-blue-400 transition">
+            <a href="{% url 'dashboard:admin_dashboard' %}">Retour</a>
+        </button>
+        </div>
+    <!-- GRID STATS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+
+        <!-- PLAN -->
+        <div class="bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <p class="text-sm text-slate-400">Plan actuel</p>
+            <h2 class="text-xl text-blue-400 font-semibold mt-2">
+                {{ company.current_plan.name|default:"Aucun plan" }}
+            </h2>
+        </div>
+
+        <!-- QUOTA -->
+        <div class="bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <p class="text-sm text-slate-400">Quota mensuel</p>
+            <h2 class="text-xl font-semibold mt-2">
+                {{ company.contacts_used_this_month }} / {{ company.monthly_quota }}
+               
+            </h2>
+            <div class="text-xs text-slate-500 mt-1">
+            Pourcentage restant :
+             <span class="text-sm text-green-400 ml-1"> {{ pourcent_quota_left|floatformat:2 }}%</span>
+            </div>
+            
+
+            <!-- Progress bar -->
+           
+        </div>
+
+        <!-- REMAINING -->
+        <div class="bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-800 shadow-xl">
+            <p class="text-sm text-slate-400">Restant</p>
+            <h2 class="text-xl font-semibold mt-2 text-green-400">
+                {{ company.quota_remaining }}
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">
+            Reset le {{ company.quota_reset_at|date:"d M Y" }}
+            </p>
+        </div>
+    </div>
+
+    <!-- CONTENT GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- UPLOADS -->
+        <div class="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Derniers uploads</h3>
+                <span class="text-xs text-slate-400">20 derniers</span>
+            </div>
+
+            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {% for upload in uploads %}
+                    <div class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition flex justify-between items-center">
+                        <div>
+                            <p class="text-md text-blue-300  font-medium">{{ upload.original_name|default:"Fichier" }}</p>
+                            <p class="text-xs text-slate-400">
+                                {{ upload.created_at|date:"d M Y H:i" }}
+                            </p>
+                            
+                        </div>
+
+                        <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium
+    {% if upload.status == 'pending' %}bg-blue-500/20 text-blue-400
+    {% elif upload.status == 'processing' %}bg-purple-500/20 text-purple-400 animate-pulse
+    {% elif upload.status == 'cleaning' %}bg-cyan-500/20 text-cyan-400 animate-pulse
+    {% elif upload.status == 'filtering' %}bg-indigo-500/20 text-indigo-400 animate-pulse
+    {% elif upload.status == 'ready' %}bg-green-500/20 text-green-400
+    {% elif upload.status == 'failed' %}bg-red-500/20 text-red-400
+    {% elif upload.status == 'expired' %}bg-gray-500/20 text-gray-400
+    {% else %}bg-yellow-500/20 text-yellow-400{% endif %}">
+    
+    {% if upload.status == 'pending' %}
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    {% elif upload.status == 'processing' or upload.status == 'cleaning' or upload.status == 'filtering' %}
+        <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+    {% elif upload.status == 'ready' %}
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+    {% elif upload.status == 'failed' %}
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    {% elif upload.status == 'expired' %}
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    {% else %}
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    {% endif %}
+    
+    {{ upload.get_status_display }}
+</span>
+                    </div>
+                {% empty %}
+                    <p class="text-slate-500 text-sm">Aucun upload</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- PROCESSINGS -->
+        <div class="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Traitements récents</h3>
+                <span class="text-xs text-slate-400">15 derniers</span>
+            </div>
+
+            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {% for process in processings %}
+                    <div class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition flex justify-between items-center">
+                        <div>
+                            <p class="text-sm font-medium">
+                                {{ process.original_filename|default:"Traitement" }}
+                            </p>
+                            <p class="text-xs text-slate-400">
+                             <span class="text-red-500">{{ process.expires_at|date:"d M Y H:i" }}</span>
+                            </p>
+                        </div>
+
+                        <!-- STATUS -->
+                        <span class="
+                            text-xs px-2 py-1 rounded
+                            {% if process.export_format == 'csv' %} bg-indigo-500/20 text-indigo-400
+                            {% elif process.export_format == 'xlsx' %} bg-emerald-500/20 text-emerald-400
+                           
+                            {% else %} bg-yellow-500/20 text-yellow-400 {% endif %}
+                        ">
+                            {{ process.export_format }}
+                        </span>
+                    </div>
+                {% empty %}
+                    <p class="text-slate-500 text-sm">Aucun traitement</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+

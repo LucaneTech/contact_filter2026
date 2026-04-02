@@ -1,4 +1,3 @@
-"""Tâches Celery Beat périodiques."""
 from celery import shared_task
 from django.utils import timezone
 from django.core.files.storage import default_storage
