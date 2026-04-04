@@ -14,14 +14,21 @@
             </a>
             <div class="flex items-center gap-6">
                 <a href="{% url 'accounts:profile' %}" class="text-slate-400 hover:text-white text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    Profil
+                   
+                     {% if company.logo %}
+                <img src="{{ company.logo.url }}" class="w-12 h-12 rounded-full object-cover border border-slate-700 shadow-lg">
+            {% else %}
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold shadow-lg">
+                    {{ company.name|slice:":1" }}
+                </div>
+            {% endif %}
+                    Profil 
                 </a>
                 <span class="text-slate-500">|</span>
                 <span class="text-slate-400 text-sm">{{ company.name }}</span>
                 <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
-                <button type="submit" class=" p-2 rounded-md duration-300 bg-red-900/50 hover:bg-red-900/20 text-red-400 border border-red-900/90 cursor-pointer text-sm ">
-                    {% lucide "log-out" class="w-5 h-5" %}
+                <button type="submit" class=" p-2 rounded-md duration-300 bg-red-900/50 hover:bg-red-900/20 text-red-400 border border-red-900/90 cursor-pointer text-sm inline-flex items-center gap-1">
+                    {% lucide "log-out" class="w-5 h-5" %} Déconnexion 
                 </button>
             </form>
             </div>

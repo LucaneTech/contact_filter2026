@@ -11,7 +11,7 @@ class CompanyAdmin(admin.ModelAdmin):
 
 @admin.register(UploadedFile)
 class UploadedFileAdmin(admin.ModelAdmin):
-    list_display = ('original_name', 'company', 'status', 'progress', 'rows_original', 'created_at')
+    list_display = ('original_name', 'company', 'status', 'progress', 'rows_original', 'created_at', 'expires_at')
     list_filter = ('status',)
 
 

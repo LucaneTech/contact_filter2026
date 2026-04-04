@@ -494,6 +494,7 @@ def normalize_filters_config(filters_config: Dict) -> Dict:
         
         return {
             'logic': filters_config.get('logic', 'AND'),
+            
             'rules': new_rules
         }
     
@@ -623,7 +624,7 @@ def validate_filter_config(filters_config: Dict) -> Tuple[bool, str]:
     
     def validate_rules(rules_list, depth=0):
         if depth > 20:
-            return False, "Max depth exceeded"
+            return False, "Le niveau d'imbrication est trop profond"
         
         for rule in rules_list:
             if is_group_node(rule):
@@ -647,7 +648,7 @@ def validate_filter_config(filters_config: Dict) -> Tuple[bool, str]:
                     return False, "Rule missing operator"
         
         return True, ""
-    
+     
     return validate_rules(filters_config['rules'])
 
 
