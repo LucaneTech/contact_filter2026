@@ -8,7 +8,7 @@ from apps.filtering.engine import filter_and_score_rows
 from apps.exports.services import export_to_file
 from contact_filter import settings
 from .services import read_file_to_rows, get_standard_row
-
+from .tasks_beat import cleanup_expired_files
 
 @shared_task(bind=True)
 def process_uploaded_file(self, upload_id: int):
@@ -106,3 +106,6 @@ def process_uploaded_file(self, upload_id: int):
         upload.status = 'failed'
         upload.error_message = str(e)[:500]
         upload.save(update_fields=['status', 'error_message'])
+
+
+cleanup_expired_files()

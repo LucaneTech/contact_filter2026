@@ -7,7 +7,6 @@ from apps.companies.models import Company, UploadedFile, ProcessingHistory
 from apps.companies.decorators import company_required, admin_required
 from apps.billing.models import Plan
 
-
 @login_required
 @company_required
 def company_dashboard(request):
@@ -21,7 +20,6 @@ def company_dashboard(request):
     total_valid = sum(p.rows_valid_phones for p in processings[:10]) 
     quota_remaining = max(0, quota_total - quota_used)
     
-  
     context = {
         'company': company,
         'uploads': uploads,
@@ -35,6 +33,7 @@ def company_dashboard(request):
         'total_valid': total_valid,
         'quota_reset_at': company.quota_reset_at,
     }
+    
     return render(request, 'dashboard/company_dashboard.html', context)
 
 

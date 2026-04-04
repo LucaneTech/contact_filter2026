@@ -17,4 +17,4 @@ class UploadedFileAdmin(admin.ModelAdmin):
 
 @admin.register(ProcessingHistory)
 class ProcessingHistoryAdmin(admin.ModelAdmin):
-    list_display = ('original_filename', 'company', 'rows_original', 'rows_after_filter', 'expires_at')
+    list_display = ('original_filename', 'company', 'rows_original', 'rows_after_filter','created_at', 'expires_at')

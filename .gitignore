@@ -38,3 +38,5 @@ celerybeat.pid
 # Coverage
 htmlcov/
 .coverage
+
+test_file.csv

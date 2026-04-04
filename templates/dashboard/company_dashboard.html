@@ -191,6 +191,8 @@
                             <th class="py-3 px-4">Progr.</th>
                             <th class="py-3 px-4">Lignes</th>
                             <th class="py-3 px-4">Date</th>
+                             <th class="py-3 px-4">Expire</th>
+
                         </tr>
                     </thead>
                     <tbody>
@@ -201,6 +203,7 @@
                             <td class="py-3 px-4">{{ u.progress }}%</td>
                             <td class="py-3 px-4 text-slate-400">{{ u.rows_original }} → {{ u.rows_after_filter }}</td>
                             <td class="py-3 px-4 text-slate-500">{{ u.created_at|date:"d/m H:i" }}</td>
+                            <td class="py-3 px-4 text-slate-500">{{ u.expires_at|date:"d/m H:i" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

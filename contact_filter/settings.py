@@ -11,6 +11,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -27,11 +28,13 @@ INSTALLED_APPS = [
     'apps.processing',
     'apps.exports',
     'apps.dashboard',
+    
     # Third party
     'tailwind',
     'theme',
     'django_browser_reload',
-    "lucide"
+    "lucide",
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -136,5 +139,5 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Quota & expiration
-HISTORIC_FILE_EXPIRATION_TIME = 4
+HISTORIC_FILE_EXPIRATION_TIME = 2
 UPLOADED_FILE_EXPIRATION_TIME = 1
