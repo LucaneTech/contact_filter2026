@@ -20,7 +20,8 @@ def company_dashboard(request):
     ready_count = company.uploads.filter(status='ready').count()
     total_valid = sum(p.rows_valid_phones for p in processings[:10]) 
     quota_remaining = max(0, quota_total - quota_used)
-
+    
+  
     context = {
         'company': company,
         'uploads': uploads,
@@ -93,47 +94,49 @@ from apps.companies.models import ProcessingHistory
 @company_required
 def download_export(request, processing_id):
     """
-    Télécharge l'export dans le format demandé.
-    Formats supportés: csv (par défaut), excel, txt
-    Utilisation: /export/123/?format=excel
+    dowload export file in the requested format (csv, excel, txt).
+     - If the requested format is the same as the original, serve the original file.
+     - If the requested format is different, read the original file, convert it to the new format, and serve the new file.
+     - Handle errors gracefully and return appropriate HTTP responses.
+     - Optionally, implement caching for converted files to improve performance on repeated requests.
+     - Ensure that only authorized users can access the export files.   
     """
-    # Récupérer le format demandé
+    # Get the requested format from query parameters (default to 'csv')
     format_choice = request.GET.get('format', 'csv').lower()
     
-    # Valider le format
+    # Validate the requested format
     valid_formats = ['csv', 'excel', 'txt']
     if format_choice not in valid_formats:
         format_choice = 'csv'
     
-    # Récupérer l'historique de traitement
+    # Get the processing history object and ensure it belongs to the current company
     processing = get_object_or_404(
         ProcessingHistory,
         pk=processing_id,
         company=request.company,
     )
     
-    # Vérifier que l'export existe
+    # Check if the export file exists
     if not processing.export_file:
         raise Http404('Export non disponible')
     
     try:
-        # Si le format demandé est le même que l'original, servir directement
+        # If the requested format is the same as the original, serve the original file
         original_format = getattr(processing, 'export_format', 'csv')
         
         if format_choice == original_format:
-            # Servir le fichier original
+            # Serve the original file
             f = processing.export_file.open('rb')
             name = os.path.basename(processing.export_file.name) or f'export.{original_format}'
             return FileResponse(f, as_attachment=True, filename=name)
         
-        # Format différent - re-générer le fichier
-        # Récupérer les données à partir du fichier original
+        # Otherwise, read the original file, convert it to the new format, and serve the new file
         rows = _get_export_data(processing)
         
         if not rows:
             raise Http404('Aucune donnée à exporter')
         
-        # Générer le nouveau format
+        # Manage conversion and caching
         new_path, new_format = export_to_file(
             rows,
             request.company.id,

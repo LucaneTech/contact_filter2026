@@ -6,6 +6,7 @@ from datetime import timedelta
 from apps.companies.models import UploadedFile, Company, ProcessingHistory
 from apps.filtering.engine import filter_and_score_rows
 from apps.exports.services import export_to_file
+from contact_filter import settings
 from .services import read_file_to_rows, get_standard_row
 
 
@@ -82,7 +83,7 @@ def process_uploaded_file(self, upload_id: int):
         upload.save(update_fields=['result_file', 'status', 'progress'])
 
         # 5. Historique
-        expires = timezone.now() + timedelta(days=15)
+        expires = timezone.now() + timedelta(days=settings.HISTORIC_FILE_EXPIRATION_TIME )
         ProcessingHistory.objects.create(
             company=upload.company,
             original_filename=upload.original_name,

@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'tailwind',
     'theme',
     'django_browser_reload',
+    "lucide"
 ]
 
 MIDDLEWARE = [
@@ -130,4 +131,5 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Quota & expiration
-FILE_EXPIRATION_TIME = 2
+HISTORIC_FILE_EXPIRATION_TIME = 4
+UPLOADED_FILE_EXPIRATION_TIME = 1

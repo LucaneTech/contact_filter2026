@@ -18,6 +18,7 @@ class FilterRuleForm(forms.Form):
         ('contains', 'Contient'),
         ('not_contains', 'Ne contient pas'),
         ('startswith', 'Commence par'),
+        ('not_startswith', 'Ne commence pas par'),
         ('endswith', 'Finit par'),
         ('in_list', 'Dans la liste (séparés par virgule)'),
         ('is_empty', 'Est vide'),
