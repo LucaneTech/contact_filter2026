@@ -92,14 +92,7 @@ from apps.companies.models import ProcessingHistory
 @login_required
 @company_required
 def download_export(request, processing_id):
-    """
-    dowload export file in the requested format (csv, excel, txt).
-     - If the requested format is the same as the original, serve the original file.
-     - If the requested format is different, read the original file, convert it to the new format, and serve the new file.
-     - Handle errors gracefully and return appropriate HTTP responses.
-     - Optionally, implement caching for converted files to improve performance on repeated requests.
-     - Ensure that only authorized users can access the export files.   
-    """
+    
     # Get the requested format from query parameters (default to 'csv')
     format_choice = request.GET.get('format', 'csv').lower()
     

@@ -62,11 +62,11 @@ class Company(models.Model):
 
 class UploadedFile(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'En attente'),
-        ('processing', 'Traitement en cours'),
-        ('cleaning', 'Nettoyage téléphonique'),
-        ('filtering', 'Application des filtres'),
-        ('ready', 'Prêt pour export'),
+        ('pending', 'Attente'),
+        ('processing', 'Traitement'),
+        ('cleaning', 'Nettoyage'),
+        ('filtering', 'Application'),
+        ('ready', 'Prêt'),
         ('failed', 'Échec'),
         ('expired', 'Expiré'),
     ]

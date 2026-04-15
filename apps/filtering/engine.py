@@ -14,17 +14,17 @@ try:
 except ImportError:
     HAS_PHONENUMBERS = False
 
-# Configuration du logging pour traçabilité
+# Configuration du logging
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# ============ VALIDATION ET SÉCURISATION DES ENTRÉES ============
 
 class Sanitizer:
     """Nettoyage et validation des entrées pour prévenir les injections et erreurs."""
     
     @staticmethod
     def safe_string(value: Any, max_length: int = 10000) -> str:
+        """Convertit et nettoie une valeur en chaîne de caractères."""
         if value is None:
             return ""
         try:
@@ -37,12 +37,15 @@ class Sanitizer:
     
     @staticmethod
     def safe_numeric(value: Any) -> Optional[float]:
+        """Convertit une valeur en nombre flottant de manière sécurisée."""
         if value is None:
             return None
         try:
             if isinstance(value, (int, float)):
                 return float(value)
+            # Nettoyer la chaîne
             cleaned = str(value).replace(',', '.').strip()
+            # Gérer les points multiples (ex: 1.000.50)
             if cleaned.count('.') > 1:
                 parts = cleaned.split('.')
                 cleaned = ''.join(parts[:-1]) + '.' + parts[-1]
@@ -52,6 +55,7 @@ class Sanitizer:
     
     @staticmethod
     def safe_list(value: Any, separator: str = ',') -> List[str]:
+        """Convertit une chaîne séparée en liste d'éléments nettoyés."""
         if value is None:
             return []
         try:
@@ -59,6 +63,25 @@ class Sanitizer:
             return [item.strip().lower() for item in items if item.strip()]
         except Exception:
             return []
+    
+    @staticmethod
+    def safe_date(value: Any) -> Optional[date]:
+        """Convertit une valeur en date de manière sécurisée."""
+        if value is None:
+            return None
+        try:
+            val_str = str(value).strip()
+            # Essayer différents formats
+            formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y%m%d']
+            for fmt in formats:
+                try:
+                    return datetime.strptime(val_str, fmt).date()
+                except ValueError:
+                    continue
+            # Essayer ISO format
+            return date.fromisoformat(val_str)
+        except Exception:
+            return None
 
 # ============ SYSTÈME DE CACHE POUR PERFORMANCES ============
 
@@ -74,17 +97,18 @@ class FilterCache:
     def get_key(self, row: Dict, rule: Dict) -> str:
         """Génère une clé unique pour une règle et une ligne."""
         try:
-            row_hash = hashlib.md5(
-                json.dumps(row, sort_keys=True, default=str).encode()
-            ).hexdigest()[:16]
+            # Utiliser seulement les champs pertinents pour le cache
+            field = rule.get('field', '')
+            row_value = str(row.get(field, ''))
             rule_hash = hashlib.md5(
                 json.dumps(rule, sort_keys=True).encode()
             ).hexdigest()[:16]
-            return f"{row_hash}_{rule_hash}"
+            return f"{row_value}_{rule_hash}"
         except Exception:
             return ""
     
     def get(self, key: str) -> Optional[bool]:
+        """Récupère une valeur du cache."""
         if key in self._cache:
             self._hits += 1
             return self._cache[key]
@@ -92,18 +116,28 @@ class FilterCache:
         return None
     
     def set(self, key: str, value: bool):
+        """Stocke une valeur dans le cache."""
         if len(self._cache) >= self._max_size:
+            # Supprimer 20% des entrées les plus anciennes
             items_to_remove = list(self._cache.keys())[:int(self._max_size * 0.2)]
             for k in items_to_remove:
                 del self._cache[k]
         self._cache[key] = value
     
+    def clear(self):
+        """Vide le cache."""
+        self._cache.clear()
+        self._hits = 0
+        self._misses = 0
+    
     def get_stats(self) -> Dict:
+        """Retourne les statistiques du cache."""
         total = self._hits + self._misses
         return {
             'hits': self._hits,
             'misses': self._misses,
-            'hit_ratio': self._hits / total if total > 0 else 0
+            'hit_ratio': self._hits / total if total > 0 else 0,
+            'size': len(self._cache)
         }
 
 # ============ OPÉRATEURS AMÉLIORÉS AVEC PROTECTION ============
@@ -121,55 +155,80 @@ def safe_operation(func: Callable) -> Callable:
 
 @safe_operation
 def _equals(val: Any, target: Any) -> bool:
-    return Sanitizer.safe_string(val) == Sanitizer.safe_string(target)
+    """Égalité stricte après nettoyage."""
+    return Sanitizer.safe_string(val).lower() == Sanitizer.safe_string(target).lower()
 
 @safe_operation
 def _not_equals(val: Any, target: Any) -> bool:
-    return Sanitizer.safe_string(val) != Sanitizer.safe_string(target)
+    """Non égalité."""
+    return Sanitizer.safe_string(val).lower() != Sanitizer.safe_string(target).lower()
 
 @safe_operation
 def _contains(val: Any, target: Any) -> bool:
-    return Sanitizer.safe_string(target) in Sanitizer.safe_string(val)
+    """Contient (insensible à la casse)."""
+    return Sanitizer.safe_string(target).lower() in Sanitizer.safe_string(val).lower()
 
 @safe_operation
 def _not_contains(val: Any, target: Any) -> bool:
-    return Sanitizer.safe_string(target) not in Sanitizer.safe_string(val)
+    """Ne contient pas."""
+    return Sanitizer.safe_string(target).lower() not in Sanitizer.safe_string(val).lower()
 
 @safe_operation
 def _startswith(val: Any, target: Any) -> bool:
-    return Sanitizer.safe_string(val).startswith(Sanitizer.safe_string(target))
+    """Commence par."""
+    return Sanitizer.safe_string(val).lower().startswith(Sanitizer.safe_string(target).lower())
 
 @safe_operation
 def _endswith(val: Any, target: Any) -> bool:
-    return Sanitizer.safe_string(val).endswith(Sanitizer.safe_string(target))
-
+    """Finit par."""
+    return Sanitizer.safe_string(val).lower().endswith(Sanitizer.safe_string(target).lower())
 
 @safe_operation
 def _not_startswith(val: Any, target: Any) -> bool:
-    return not Sanitizer.safe_string(val).startswith(Sanitizer.safe_string(target))
+    """Ne commence pas par."""
+    return not Sanitizer.safe_string(val).lower().startswith(Sanitizer.safe_string(target).lower())
 
 @safe_operation
 def _is_empty(val: Any, _: Any) -> bool:
+    """Est vide."""
     return not Sanitizer.safe_string(val)
 
 @safe_operation
 def _not_empty(val: Any, _: Any) -> bool:
+    """N'est pas vide."""
     return bool(Sanitizer.safe_string(val))
 
 @safe_operation
 def _in_list(val: Any, target: Any) -> bool:
-    val_clean = Sanitizer.safe_string(val)
+    """Dans la liste (support exact et préfixes)."""
+    val_clean = Sanitizer.safe_string(val).lower()
     target_list = Sanitizer.safe_list(target)
-    # Pour les préfixes comme "6,7", vérifier si la valeur commence par un des éléments
+    
+    if not target_list:
+        return False
+    
+    # Vérification exacte
+    if val_clean in target_list:
+        return True
+    
+    # Vérification des préfixes (utile pour numéros de téléphone)
     for item in target_list:
         if val_clean.startswith(item):
             return True
-    return val_clean in target_list
+    
+    return False
+
+@safe_operation
+def _not_in_list(val: Any, target: Any) -> bool:
+    """Pas dans la liste."""
+    return not _in_list(val, target)
 
 @safe_operation
 def _regex(val: Any, target: Any) -> bool:
+    """Expression régulière."""
     try:
         pattern = Sanitizer.safe_string(target)
+        # Protection contre les regex trop longues
         if len(pattern) > 1000:
             return False
         return bool(re.search(pattern, Sanitizer.safe_string(val), re.IGNORECASE))
@@ -178,6 +237,7 @@ def _regex(val: Any, target: Any) -> bool:
 
 @safe_operation
 def _greater_than(val: Any, target: Any) -> bool:
+    """Supérieur à (numérique)."""
     v = Sanitizer.safe_numeric(val)
     t = Sanitizer.safe_numeric(target)
     if v is None or t is None:
@@ -186,6 +246,7 @@ def _greater_than(val: Any, target: Any) -> bool:
 
 @safe_operation
 def _less_than(val: Any, target: Any) -> bool:
+    """Inférieur à (numérique)."""
     v = Sanitizer.safe_numeric(val)
     t = Sanitizer.safe_numeric(target)
     if v is None or t is None:
@@ -194,6 +255,7 @@ def _less_than(val: Any, target: Any) -> bool:
 
 @safe_operation
 def _greater_or_equal(val: Any, target: Any) -> bool:
+    """Supérieur ou égal (numérique)."""
     v = Sanitizer.safe_numeric(val)
     t = Sanitizer.safe_numeric(target)
     if v is None or t is None:
@@ -202,6 +264,7 @@ def _greater_or_equal(val: Any, target: Any) -> bool:
 
 @safe_operation
 def _less_or_equal(val: Any, target: Any) -> bool:
+    """Inférieur ou égal (numérique)."""
     v = Sanitizer.safe_numeric(val)
     t = Sanitizer.safe_numeric(target)
     if v is None or t is None:
@@ -210,37 +273,66 @@ def _less_or_equal(val: Any, target: Any) -> bool:
 
 @safe_operation
 def _between(val: Any, target: Any) -> bool:
-    """Opérateur BETWEEN: target format 'min,max'"""
+    """Entre deux valeurs numériques (format: 'min,max')."""
     try:
         range_str = Sanitizer.safe_string(target)
         if ',' not in range_str:
             return False
-        min_val, max_val = range_str.split(',', 1)
+        
+        parts = range_str.split(',', 1)
+        min_val = Sanitizer.safe_numeric(parts[0])
+        max_val = Sanitizer.safe_numeric(parts[1])
         v = Sanitizer.safe_numeric(val)
-        min_v = Sanitizer.safe_numeric(min_val)
-        max_v = Sanitizer.safe_numeric(max_val)
-        if v is None or min_v is None or max_v is None:
+        
+        if v is None or min_val is None or max_val is None:
             return False
-        return min_v <= v <= max_v
+        
+        return min_val <= v <= max_val
     except Exception:
         return False
 
 @safe_operation
 def _in_date_range(val: Any, target: Any) -> bool:
-    """Vérifie si une date est dans un intervalle: format 'YYYY-MM-DD,YYYY-MM-DD'"""
+    """Date dans un intervalle (format: 'YYYY-MM-DD,YYYY-MM-DD')."""
     try:
         range_str = Sanitizer.safe_string(target)
         if ',' not in range_str:
             return False
+        
         start_str, end_str = range_str.split(',', 1)
-        val_date = datetime.fromisoformat(Sanitizer.safe_string(val))
-        start_date = datetime.fromisoformat(start_str.strip())
-        end_date = datetime.fromisoformat(end_str.strip())
-        return start_date <= val_date <= end_date
+        val_str = Sanitizer.safe_string(val).strip()
+        start_str = start_str.strip()
+        end_str = end_str.strip()
+        
+        # Optimisation: comparaison lexicographique pour format ISO
+        if val_str.count('-') == 2 and start_str.count('-') == 2:
+            return start_str <= val_str <= end_str
+        
+        # Fallback sur parsing complet si format différent
+        val_date = Sanitizer.safe_date(val)
+        start_date = Sanitizer.safe_date(start_str)
+        end_date = Sanitizer.safe_date(end_str)
+        
+        if val_date and start_date and end_date:
+            return start_date <= val_date <= end_date
+        
+        return False
     except Exception:
         return False
 
-# Opérateurs étendus
+@safe_operation
+def _phone_valid(val: Any, _: Any) -> bool:
+    """Numéro de téléphone valide."""
+    is_valid, _ = PhoneValidator.validate(val)
+    return is_valid
+
+@safe_operation
+def _phone_country(val: Any, target: Any) -> bool:
+    """Pays du numéro de téléphone."""
+    country = PhoneValidator.get_country(val)
+    return country and country.upper() == Sanitizer.safe_string(target).upper()
+
+# Dictionnaire des opérateurs disponibles
 OPERATORS = {
     'equals': _equals,
     'not_equals': _not_equals,
@@ -252,6 +344,7 @@ OPERATORS = {
     'is_empty': _is_empty,
     'not_empty': _not_empty,
     'in_list': _in_list,
+    'not_in_list': _not_in_list,
     'regex': _regex,
     'greater_than': _greater_than,
     'less_than': _less_than,
@@ -259,9 +352,14 @@ OPERATORS = {
     'less_or_equal': _less_or_equal,
     'between': _between,
     'in_date_range': _in_date_range,
+    'phone_valid': _phone_valid,
+    'phone_country': _phone_country,
 }
 
-# ============ SYSTÈME DE VALIDATION DE TÉLÉPHONE RENFORCÉ ============
+# Opérateurs qui ne nécessitent pas de valeur
+NO_VALUE_OPERATORS = {'is_empty', 'not_empty', 'phone_valid'}
+
+# ============ VALIDATION DE TÉLÉPHONE ============
 
 class PhoneValidator:
     """Validation téléphonique robuste avec cache."""
@@ -271,6 +369,7 @@ class PhoneValidator:
     
     @classmethod
     def validate(cls, phone: Any, default_region: str = 'FR') -> Tuple[bool, str]:
+        """Valide et normalise un numéro de téléphone."""
         if not phone:
             return False, ''
         
@@ -283,18 +382,23 @@ class PhoneValidator:
         result = cls._do_validate(raw, default_region)
         
         if len(cls._cache) >= cls._max_cache:
-            cls._cache.clear()
-        cls._cache[cache_key] = result
+            # Supprimer 50% du cache quand plein
+            keys = list(cls._cache.keys())[:cls._max_cache // 2]
+            for k in keys:
+                del cls._cache[k]
         
+        cls._cache[cache_key] = result
         return result
     
     @classmethod
     def _do_validate(cls, raw: str, default_region: str) -> Tuple[bool, str]:
+        """Validation interne."""
         cleaned = re.sub(r'[^\d+]', '', raw)
         
         if not HAS_PHONENUMBERS:
+            # Validation basique sans librairie
             is_valid = len(cleaned) >= 10 and cleaned.replace('+', '').isdigit()
-            return is_valid, raw if is_valid else ''
+            return is_valid, cleaned if is_valid else raw
         
         try:
             parsed = phonenumbers.parse(raw, default_region)
@@ -310,6 +414,7 @@ class PhoneValidator:
     
     @classmethod
     def get_country(cls, phone: Any, default_region: str = 'FR') -> Optional[str]:
+        """Retourne le code pays d'un numéro."""
         if not HAS_PHONENUMBERS or not phone:
             return None
         try:
@@ -319,17 +424,24 @@ class PhoneValidator:
         except NumberParseException:
             pass
         return None
+    
+    @classmethod
+    def clear_cache(cls):
+        """Vide le cache de validation."""
+        cls._cache.clear()
 
-# ============ APPLICATION DES RÈGLES AVEC CACHE ET SUPPORT GROUPE ============
+# ============ CACHE GLOBAL ============
 
 _cache = FilterCache()
 
+# ============ APPLICATION DES RÈGLES ============
+
 def apply_filter_rule(row: Dict[str, Any], rule: Dict) -> bool:
-    """Applique une règle simple avec cache et validation renforcée."""
+    """Applique une règle simple avec cache."""
     
     field = rule.get('field')
     operator = rule.get('operator')
-    value = rule.get('value')
+    value = rule.get('value', '')
     
     if not field or not operator:
         return True
@@ -349,7 +461,11 @@ def apply_filter_rule(row: Dict[str, Any], rule: Dict) -> bool:
         return True
     
     try:
-        result = op_func(row_val, value if value is not None else '')
+        # Les opérateurs sans valeur ignorent le paramètre value
+        if operator in NO_VALUE_OPERATORS:
+            result = op_func(row_val, '')
+        else:
+            result = op_func(row_val, value if value is not None else '')
         
         if cache_key:
             _cache.set(cache_key, result)
@@ -359,67 +475,48 @@ def apply_filter_rule(row: Dict[str, Any], rule: Dict) -> bool:
         logger.error(f"Error applying rule {rule}: {e}")
         return False
 
-
 def is_group_node(node: Dict) -> bool:
-    """
-    Détermine si un nœud est un groupe (AND/OR).
-    Supporte à la fois l'ancien et le nouveau format.
-    """
-    # Nouveau format avec 'type': 'group'
-    if node.get('type') == 'group':
-        return True
-    # Ancien format: a 'logic' et 'rules' sans 'type' mais avec des règles
-    if 'logic' in node and 'rules' in node and node['rules']:
-        # Vérifier si les règles sont des dicts (pas des listes simples)
-        if node['rules'] and isinstance(node['rules'][0], dict):
-            return True
-    return False
-
+    """Détermine si un nœud est un groupe (AND/OR)."""
+    if not isinstance(node, dict):
+        return False
+    return node.get('type') == 'group' or ('logic' in node and 'rules' in node)
 
 def apply_filter_group(row: Dict[str, Any], group: Dict) -> bool:
-    """
-    Applique un groupe de règles (AND/OR) avec support de l'imbrication.
-    Supporte à la fois l'ancien format (sans 'type') et le nouveau format (avec 'type': 'group').
-    """
+    """Applique un groupe de règles (AND/OR) avec support d'imbrication."""
     
-    # Extraire la logique et les règles
-    logic = group.get('logic', 'AND')
+    if not group:
+        return True
+    
+    logic = group.get('logic', 'AND').upper()
     rules = group.get('rules', [])
     
     if not rules:
         return True
     
-    # Protection contre les récursions trop profondes
     max_depth = 20
     
     def _evaluate(rules_list, depth=0):
         if depth > max_depth:
-            logger.warning("Max recursion depth reached in filter groups")
+            logger.warning("Max recursion depth reached")
             return True
         
         results = []
         for item in rules_list:
-            # Vérifier si c'est un sous-groupe
             if is_group_node(item):
-                # C'est un sous-groupe, évaluation récursive
-                sub_logic = item.get('logic', 'AND')
+                # Sous-groupe
+                sub_logic = item.get('logic', 'AND').upper()
                 sub_rules = item.get('rules', [])
-                
-                if not sub_rules:
-                    continue
-                
-                sub_results = _evaluate(sub_rules, depth + 1)
-                results.append(sub_results)
+                if sub_rules:
+                    sub_result = _evaluate(sub_rules, depth + 1)
+                    results.append(sub_result)
             else:
-                # C'est une règle simple
+                # Règle simple
                 results.append(apply_filter_rule(row, item))
         
         if not results:
             return True
         
-        if logic.upper() == 'OR':
-            return any(results)
-        return all(results)
+        return any(results) if logic == 'OR' else all(results)
     
     try:
         return _evaluate(rules)
@@ -427,9 +524,8 @@ def apply_filter_group(row: Dict[str, Any], group: Dict) -> bool:
         logger.error(f"Error evaluating filter group: {e}")
         return True
 
-
 def apply_scoring(row: Dict[str, Any], config: List[Dict]) -> int:
-    """Calcul de score avec validation des entrées."""
+    """Calcule le score d'une ligne selon la configuration."""
     
     if not config:
         return 0
@@ -445,10 +541,16 @@ def apply_scoring(row: Dict[str, Any], config: List[Dict]) -> int:
             if not field or not operator or not points:
                 continue
             
-            row_val = row.get(field, '')
             op_func = OPERATORS.get(operator)
+            if not op_func:
+                continue
             
-            if op_func and op_func(row_val, value if value is not None else ''):
+            if operator in NO_VALUE_OPERATORS:
+                matches = op_func(row.get(field, ''), '')
+            else:
+                matches = op_func(row.get(field, ''), value if value is not None else '')
+            
+            if matches:
                 total += points
                 
         except Exception as e:
@@ -457,67 +559,64 @@ def apply_scoring(row: Dict[str, Any], config: List[Dict]) -> int:
     
     return total
 
-
-# ============ FONCTION PRINCIPALE AMÉLIORÉE ============
+# ============ NORMALISATION DE CONFIGURATION ============
 
 def normalize_filters_config(filters_config: Dict) -> Dict:
-    """
-    Normalise la configuration des filtres pour supporter à la fois
-    l'ancien format (liste plate) et le nouveau format (imbriqué).
-    """
+    """Normalise la configuration pour supporter tous les formats."""
+    
     if not filters_config:
         return {'logic': 'AND', 'rules': []}
     
-    # Si c'est déjà une configuration valide avec structure imbriquée
-    if 'rules' in filters_config and filters_config['rules']:
-        # Vérifier si les règles sont déjà au bon format
-        first_rule = filters_config['rules'][0] if filters_config['rules'] else None
-        if first_rule and (is_group_node(first_rule) or 'field' in first_rule):
-            return filters_config
+    # Si déjà au bon format
+    if 'rules' in filters_config and isinstance(filters_config['rules'], list):
+        # Vérifier si les règles sont déjà normalisées
+        if filters_config['rules']:
+            first = filters_config['rules'][0]
+            if isinstance(first, dict) and ('type' in first or 'field' in first):
+                return {
+                    'logic': filters_config.get('logic', 'AND').upper(),
+                    'rules': filters_config['rules']
+                }
     
-    # Convertir l'ancien format (liste plate) vers le nouveau
+    # Conversion depuis l'ancien format
     old_rules = filters_config.get('rules', [])
-    if old_rules and isinstance(old_rules, list):
-        new_rules = []
-        for rule in old_rules:
+    new_rules = []
+    
+    for rule in old_rules:
+        if isinstance(rule, dict):
             if 'rules' in rule:
-                # C'est déjà un groupe, le garder tel quel
-                new_rules.append(rule)
+                # C'est un groupe
+                new_rules.append({
+                    'type': 'group',
+                    'logic': rule.get('logic', 'AND').upper(),
+                    'rules': rule.get('rules', [])
+                })
             elif 'field' in rule:
-                # C'est une règle simple, ajouter 'type'
+                # C'est une règle simple
                 new_rules.append({
                     'type': 'rule',
                     'field': rule.get('field'),
                     'operator': rule.get('operator'),
                     'value': rule.get('value', '')
                 })
-        
-        return {
-            'logic': filters_config.get('logic', 'AND'),
-            
-            'rules': new_rules
-        }
     
-    return filters_config
+    return {
+        'logic': filters_config.get('logic', 'AND').upper(),
+        'rules': new_rules
+    }
 
+# ============ FONCTION PRINCIPALE ============
 
 def filter_and_score_rows(
     rows: List[Dict],
     filters_config: Dict,
-    scoring_config: List[Dict],
+    scoring_config: Optional[List[Dict]] = None,
     min_score: int = 0,
     phone_field: str = 'phone',
     default_region: str = 'FR',
+    enrich: bool = True
 ) -> Tuple[List[Dict], int, int]:
-    """
-    Version ultra-robuste du filtre avec:
-    - Support des groupes AND/OR imbriqués
-    - Validation des entrées
-    - Cache intelligent
-    - Protection contre les erreurs
-    """
     
-    # Validation des entrées
     if not rows:
         return [], 0, 0
     
@@ -529,7 +628,6 @@ def filter_and_score_rows(
     if filters_config:
         filters_config = normalize_filters_config(filters_config)
     
-    # Préparation
     filtered = []
     valid_phones = 0
     stats = defaultdict(int)
@@ -543,7 +641,7 @@ def filter_and_score_rows(
         stats['processed'] += 1
         
         try:
-            # Application des filtres (supporte maintenant l'imbrication)
+            # Application des filtres
             if filters_config and filters_config.get('rules'):
                 if not apply_filter_group(row, filters_config):
                     stats['filtered_out'] += 1
@@ -556,27 +654,29 @@ def filter_and_score_rows(
                 stats['score_too_low'] += 1
                 continue
             
-            # Validation téléphone
-            phone_value = row.get(phone_field, '')
-            is_valid, normalized = PhoneValidator.validate(phone_value, default_region)
-            
-            if is_valid and normalized:
-                valid_phones += 1
-            
-            # Enrichissement de la ligne
-            enriched_row = {
-                **row,
-                '_score': score,
-                'phone_valid': is_valid,
-                'phone_normalized': normalized if is_valid else phone_value,
-                '_filter_metadata': {
-                    'timestamp': datetime.now().isoformat(),
-                    'score': score,
-                    'phone_validated': is_valid
+            # Validation téléphone si enrichissement demandé
+            if enrich:
+                phone_value = row.get(phone_field, '')
+                is_valid, normalized = PhoneValidator.validate(phone_value, default_region)
+                
+                if is_valid:
+                    valid_phones += 1
+                
+                enriched_row = {
+                    **row,
+                    '_score': score,
+                    '_phone_valid': is_valid,
+                    '_phone_normalized': normalized if is_valid else phone_value,
+                    '_filter_metadata': {
+                        'timestamp': datetime.now().isoformat(),
+                        'score': score,
+                        'phone_validated': is_valid
+                    }
                 }
-            }
+                filtered.append(enriched_row)
+            else:
+                filtered.append({**row, '_score': score})
             
-            filtered.append(enriched_row)
             stats['kept'] += 1
             
         except Exception as e:
@@ -584,7 +684,6 @@ def filter_and_score_rows(
             stats['errors'] += 1
             continue
     
-    # Log des statistiques
     logger.info(f"Filter stats: {dict(stats)}")
     logger.info(f"Cache stats: {_cache.get_stats()}")
     
@@ -592,66 +691,79 @@ def filter_and_score_rows(
     
     return filtered, valid_phones, rejected
 
-
-# ============ FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ============
+# ============ UTILITAIRES ============
 
 def reset_cache():
-    """Reset le cache de filtrage."""
+    """Reset tous les caches."""
     global _cache
-    _cache = FilterCache()
-
+    _cache.clear()
+    PhoneValidator.clear_cache()
 
 def get_filter_stats() -> Dict:
-    """Retourne les statistiques du filtre."""
+    """Retourne les statistiques des filtres."""
     return _cache.get_stats()
 
-
 def validate_filter_config(filters_config: Dict) -> Tuple[bool, str]:
-    """Valide une configuration de filtres avec support imbriqué."""
+    """Valide une configuration de filtres."""
     
     if not filters_config:
-        return True, "Empty config"
+        return True, "Configuration vide"
     
-    required_keys = {'logic', 'rules'}
-    if not all(k in filters_config for k in required_keys):
-        return False, f"Missing required keys: {required_keys - set(filters_config.keys())}"
+    if not isinstance(filters_config, dict):
+        return False, "La configuration doit être un dictionnaire"
     
-    if filters_config['logic'] not in ['AND', 'OR']:
-        return False, f"Invalid logic: {filters_config['logic']}"
+    if 'rules' not in filters_config:
+        return False, "Clé 'rules' manquante"
     
     if not isinstance(filters_config['rules'], list):
-        return False, "rules must be a list"
+        return False, "'rules' doit être une liste"
+    
+    logic = filters_config.get('logic', 'AND').upper()
+    if logic not in ['AND', 'OR']:
+        return False, f"Logique invalide: {logic}"
     
     def validate_rules(rules_list, depth=0):
         if depth > 20:
-            return False, "Le niveau d'imbrication est trop profond"
+            return False, "Profondeur d'imbrication trop grande"
         
         for rule in rules_list:
+            if not isinstance(rule, dict):
+                return False, "Chaque règle doit être un dictionnaire"
+            
             if is_group_node(rule):
                 # Valider le sous-groupe
-                sub_logic = rule.get('logic')
+                sub_logic = rule.get('logic', 'AND').upper()
                 if sub_logic not in ['AND', 'OR']:
-                    return False, f"Invalid subgroup logic: {sub_logic}"
+                    return False, f"Logique de sous-groupe invalide: {sub_logic}"
                 
                 sub_rules = rule.get('rules', [])
-                if not sub_rules:
-                    return False, "Empty subgroup"
+                if not isinstance(sub_rules, list):
+                    return False, "Les règles du sous-groupe doivent être une liste"
                 
-                is_valid, msg = validate_rules(sub_rules, depth + 1)
-                if not is_valid:
-                    return False, msg
+                if sub_rules:
+                    is_valid, msg = validate_rules(sub_rules, depth + 1)
+                    if not is_valid:
+                        return False, msg
             else:
                 # Valider la règle simple
-                if not rule.get('field'):
-                    return False, "Rule missing field"
-                if not rule.get('operator'):
-                    return False, "Rule missing operator"
+                if 'field' not in rule:
+                    return False, "Règle sans champ"
+                if 'operator' not in rule:
+                    return False, "Règle sans opérateur"
+                
+                operator = rule['operator']
+                if operator not in OPERATORS:
+                    return False, f"Opérateur inconnu: {operator}"
+                
+                # Vérifier si une valeur est requise
+                if operator not in NO_VALUE_OPERATORS:
+                    if 'value' not in rule:
+                        return False, f"Valeur requise pour l'opérateur {operator}"
         
         return True, ""
-     
+    
     return validate_rules(filters_config['rules'])
 
-
-# Garder les fonctions existantes pour compatibilité
+# Compatibilité
 validate_phone = PhoneValidator.validate
 get_phone_country = PhoneValidator.get_country

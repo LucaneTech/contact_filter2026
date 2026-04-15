@@ -1,78 +1,238 @@
 {% extends "base.html" %}
 {% load static %}
 {% load lucide %}
+
 {% block title %}Filtres - {{ upload.original_name }}{% endblock %}
 
 {% block nav %}
 <nav class="border-b border-slate-700/50 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
         <div class="flex justify-between h-14 items-center">
-            <a href="{% url 'dashboard:company_dashboard' %}" class="flex flex-row items-center gap-2 bg-blue-900/50  p-3  border border-blue-900/20 text-blue-400 text-sm rounded-lg  hover:text-blue-300 font-medium">{% lucide "home" class="w-5 h-5" %} Retour</a>
-            <span class="flex flex-row gap-2 items-center bg-green-900/50  p-3  border border-green-900/20 text-green-400 text-sm rounded-lg truncate max-w-[300px]"> {% lucide "file-check-corner" class="w-5 h-5" %} {{ upload.original_name }}</span>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'dashboard:company_dashboard' %}" class="text-slate-400 hover:text-slate-200 transition-colors">
+                    {% lucide "arrow-left" class="w-5 h-5" %}
+                </a>
+                <span class="text-md font-medium text-slate-200">
+                    Filtres pour : {{ upload.original_name }}
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-500">
+                    {{ upload.row_count }} contacts
+                </span>
+            </div>
         </div>
     </div>
 </nav>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 py-8">
+<div class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-8">
-        <h1 class="text-2xl font-bold text-slate-100">Configurer les filtres</h1>
-        <p class="text-slate-400 mt-1">Définissez les critères pour filtrer vos contacts avant traitement.</p>
+        <h1 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            {% lucide "filter" class="w-6 h-6 text-blue-400" %}
+            Configurer les filtres
+        </h1>
+        <p class="text-slate-400 mt-1">
+            Définissez les critères pour filtrer vos contacts. 
+            <span class="text-blue-400">Exemple : ville = Paris ET (téléphone commence par 6 OU 7)</span>
+        </p>
     </div>
 
     <form method="post" id="filterForm">
         {% csrf_token %}
         
-        <!-- Logique principale -->
-        <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-6 mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-slate-100">Groupe principal</h2>
-                <div class="flex gap-2">
-                    <button type="button" id="toggleLogicBtn" class="px-3 md:p-4 py-1 md:py-2 rounded-lg text-sm bg-blue-900/50 text-blue-400 border border-blue-400/20 cursor-pointer duration-300 hover:bg-blue-900/20">
-                        ET (AND)
+        <!-- Groupe principal -->
+        <div class="rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 mb-6 backdrop-blur-sm">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-100 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Groupe principal
+                    </h2>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" id="toggleLogicBtn" 
+                            class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300
+                                   bg-blue-900/50 text-blue-400 border border-blue-400/30 
+                                   hover:bg-blue-900/70 hover:border-blue-400/50 cursor-pointer">
+                        <span class="flex items-center gap-1">
+                            {% lucide "git-merge" class="w-4 h-4" %}
+                            <span id="logicLabel">ET (AND)</span>
+                        </span>
                     </button>
-                    <button type="button" id="addRuleBtn" class="px-3 py-1 rounded-lg bg-emerald-900/50 text-emerald-400 border border-emerald-400/20 hover:bg-emerald-900/20 text-sm font-medium cursor-pointer ">
-                        + Ajouter règle
+                    <button type="button" id="addRuleBtn" 
+                            class="px-4 py-2 rounded-xl bg-emerald-900/50 text-emerald-400 
+                                   border border-emerald-400/30 hover:bg-emerald-900/70 
+                                   hover:border-emerald-400/50 text-sm font-medium cursor-pointer
+                                   transition-all duration-300">
+                        <span class="flex items-center gap-1">
+                            {% lucide "plus" class="w-4 h-4" %}
+                            Règle
+                        </span>
                     </button>
-                    <button type="button" id="addGroupBtn" class="px-3 py-1 rounded-lg bg-purple-900/50 text-purple-400 border border-purple-400/20 hover:bg-purple-900/20 text-sm font-medium cursor-pointer">
-                        + Ajouter sous-groupe
+                    <button type="button" id="addGroupBtn" 
+                            class="px-4 py-2 rounded-xl bg-purple-900/50 text-purple-400 
+                                   border border-purple-400/30 hover:bg-purple-900/70 
+                                   hover:border-purple-400/50 text-sm font-medium cursor-pointer
+                                   transition-all duration-300">
+                        <span class="flex items-center gap-1">
+                            {% lucide "layers" class="w-4 h-4" %}
+                            Sous-groupe
+                        </span>
                     </button>
                 </div>
             </div>
             
-            <p class="text-slate-500 text-sm mb-4">
-                💡 <strong>Astuce :</strong> Utilisez un sous-groupe "OU" pour les alternatives (ex: téléphone commence par 6 ou 7)
-            </p>
+            <!-- Exemple rapide -->
+            <div class="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <p class="text-sm text-slate-400 flex items-start gap-2">
+                    {% lucide "lightbulb" class="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" %}
+                    <span>
+                        <strong class="text-slate-300">Exemple :</strong> 
+                        <span class="text-blue-400">ville = Paris</span> 
+                        <span class="text-slate-500">ET</span> 
+                        <span class="text-purple-400">(téléphone commence par 6 OU 7)</span>
+                        → Créez une règle "ville = Paris", puis un sous-groupe "OU" avec deux règles "téléphone commence par 6" et "téléphone commence par 7"
+                    </span>
+                </p>
+            </div>
 
             <!-- Container des règles -->
-            <div id="rules-container" class="space-y-3"></div>
+            <div id="rules-container" class="space-y-3 min-h-[100px]"></div>
             
-            <p id="empty-message" class="text-slate-500 text-sm py-6 text-center">
-                Aucune règle. Cliquez "Ajouter règle" pour filtrer ou lancez sans filtre.
-            </p>
+            <div id="empty-message" class="text-slate-500 text-sm py-8 text-center border-2 border-dashed border-slate-700/50 rounded-xl">
+                <div class="flex flex-col items-center gap-2">
+                    {% lucide "filter" class="w-8 h-8 text-slate-600" %}
+                    <span>Aucune règle définie</span>
+                    <span class="text-xs">Cliquez "Règle" ou "Sous-groupe" pour commencer</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scoring (optionnel) -->
+        <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-6 mb-6">
+            <div class="flex items-center gap-2 mb-4">
+                {% lucide "star" class="w-5 h-5 text-yellow-400" %}
+                <h2 class="text-lg font-semibold text-slate-100">Scoring (optionnel)</h2>
+                <span class="text-xs text-slate-500 ml-2">Attribuez des points selon des critères</span>
+            </div>
+            
+            <div id="scoring-container" class="space-y-3"></div>
+            
+            <button type="button" id="addScoringBtn" 
+                    class="mt-3 px-4 py-2 rounded-lg bg-slate-700/50 text-slate-300 
+                           border border-slate-600/50 hover:bg-slate-700 text-sm
+                           transition-all duration-300">
+                <span class="flex items-center gap-1">
+                    {% lucide "plus" class="w-4 h-4" %}
+                    Ajouter un critère de score
+                </span>
+            </button>
+            
+            <div class="mt-4">
+                <label class="block text-sm text-slate-400 mb-2">Score minimum requis</label>
+                <input type="number" id="minScore" name="min_score" value="0" min="0" 
+                       class="w-32 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">
+            </div>
         </div>
 
         <input type="hidden" name="filters_config" id="filtersConfig">
+        <input type="hidden" name="scoring_config" id="scoringConfig">
 
-        <div class="flex gap-4">
-            <button type="submit" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all">
+        <div class="flex gap-4 items-center">
+            <button type="submit" 
+                    class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 
+                           hover:from-blue-500 hover:to-blue-400 text-white font-medium 
+                           transition-all duration-300 shadow-lg shadow-blue-900/30
+                           flex items-center gap-2">
+                {% lucide "play" class="w-4 h-4" %}
                 Lancer le traitement
             </button>
-            <a href="{% url 'dashboard:company_dashboard' %}" class="px-6 py-3 rounded-xl border border-slate-600 text-slate-400 hover:bg-slate-800">Annuler</a>
+            <a href="{% url 'dashboard:company_dashboard' %}" 
+               class="px-6 py-3 rounded-xl border border-slate-600 text-slate-400 
+                      hover:bg-slate-800 hover:text-slate-300 transition-all duration-300">
+                Annuler
+            </a>
+            <button type="button" id="previewBtn" 
+                    class="px-4 py-2 rounded-lg bg-slate-700/50 text-slate-300 
+                           border border-slate-600/50 hover:bg-slate-700 text-sm
+                           transition-all duration-300">
+                {% lucide "eye" class="w-4 h-4" %}
+                Prévisualiser
+            </button>
         </div>
     </form>
 </div>
 
+<!-- Modal de prévisualisation -->
+<div id="previewModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div class="p-4 border-b border-slate-700 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-slate-100">Prévisualisation de la configuration</h3>
+            <button type="button" id="closePreviewBtn" class="text-slate-400 hover:text-slate-200">
+                {% lucide "x" class="w-5 h-5" %}
+            </button>
+        </div>
+        <div class="p-4 overflow-auto max-h-[60vh]">
+            <pre id="previewContent" class="text-sm text-slate-300 font-mono whitespace-pre-wrap"></pre>
+        </div>
+    </div>
+</div>
+
 <script>
-// Données disponibles depuis Django
+// ============ CONFIGURATION ============
+
 const FILTER_FIELDS = [
     {% for key, label in filter_fields %}
     { value: '{{ key }}', label: '{{ label|escapejs }}' },
     {% endfor %}
+    // Champs spéciaux
+    { value: '_phone_valid', label: 'Téléphone valide' },
+    { value: '_phone_country', label: 'Pays du téléphone' },
 ];
 
-const DEFAULT_FIELD = FILTER_FIELDS.length > 0 ? FILTER_FIELDS[0].value : 'tel';
+const DEFAULT_FIELD = FILTER_FIELDS.length > 0 ? FILTER_FIELDS[0].value : '';
+
+// Opérateurs disponibles
+const OPERATORS = [
+    // Texte
+    { value: 'equals', label: 'Égal à', category: 'text' },
+    { value: 'not_equals', label: 'Différent de', category: 'text' },
+    { value: 'contains', label: 'Contient', category: 'text' },
+    { value: 'not_contains', label: 'Ne contient pas', category: 'text' },
+    { value: 'startswith', label: 'Commence par', category: 'text' },
+    { value: 'not_startswith', label: 'Ne commence pas par', category: 'text' },
+    { value: 'endswith', label: 'Finit par', category: 'text' },
+    
+    // Liste
+    { value: 'in_list', label: 'Dans la liste (virgules)', category: 'list' },
+    { value: 'not_in_list', label: 'Pas dans la liste', category: 'list' },
+    
+    // Vide
+    { value: 'is_empty', label: 'Est vide', category: 'empty' },
+    { value: 'not_empty', label: 'N\'est pas vide', category: 'empty' },
+    
+    // Numérique
+    { value: 'greater_than', label: '> (Supérieur)', category: 'numeric' },
+    { value: 'less_than', label: '< (Inférieur)', category: 'numeric' },
+    { value: 'greater_or_equal', label: '≥ (Supérieur ou égal)', category: 'numeric' },
+    { value: 'less_or_equal', label: '≤ (Inférieur ou égal)', category: 'numeric' },
+    { value: 'between', label: 'Entre (min,max)', category: 'numeric' },
+    
+    // Date
+    { value: 'in_date_range', label: 'Date entre (début,fin)', category: 'date' },
+    
+    // Avancé
+    { value: 'regex', label: 'Expression régulière', category: 'advanced' },
+    
+    // Téléphone
+    { value: 'phone_valid', label: 'Téléphone valide', category: 'phone' },
+    { value: 'phone_country', label: 'Pays du téléphone', category: 'phone' },
+];
+
+// Opérateurs qui ne nécessitent pas de valeur
+const NO_VALUE_OPERATORS = ['is_empty', 'not_empty', 'phone_valid'];
 
 // État global
 let state = {
@@ -81,24 +241,21 @@ let state = {
     groupCounter: 1
 };
 
-// Opérateurs disponibles
-const OPERATORS = [
-    { value: 'equals', label: 'Égal à' },
-    { value: 'not_equals', label: 'Différent de' },
-    { value: 'contains', label: 'Contient' },
-    { value: 'not_contains', label: 'Ne contient pas' },
-    { value: 'startswith', label: 'Commence par' },
-    { value: 'not_startswith', label: 'Ne commence pas par' },
-    { value: 'endswith', label: 'Finit par' },
-    { value: 'in_list', label: 'Dans la liste (séparé par virgules)' },
-    { value: 'is_empty', label: 'Est vide' },
-    { value: 'not_empty', label: "N'est pas vide" },
-    { value: 'regex', label: 'Expression régulière' }
-];
+let scoringState = {
+    rules: []
+};
 
-// Fonctions de rendu
-function renderFieldSelect(value = '') {
-    let html = '<select class="field-select w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">';
+// ============ FONCTIONS DE RENDU ============
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function renderFieldSelect(value = '', className = 'field-select') {
+    let html = `<select class="${className} w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none">`;
     FILTER_FIELDS.forEach(field => {
         const selected = field.value === value ? 'selected' : '';
         html += `<option value="${field.value}" ${selected}>${field.label}</option>`;
@@ -107,50 +264,76 @@ function renderFieldSelect(value = '') {
     return html;
 }
 
-function renderOperatorSelect(value = 'equals') {
-    let html = '<select class="operator-select w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">';
-    OPERATORS.forEach(op => {
-        const selected = op.value === value ? 'selected' : '';
-        html += `<option value="${op.value}" ${selected}>${op.label}</option>`;
+function renderOperatorSelect(value = 'equals', className = 'operator-select') {
+    let html = `<select class="${className} w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none">`;
+    
+    // Grouper par catégorie
+    const categories = {
+        text: 'Texte',
+        list: 'Liste',
+        empty: 'Vide',
+        numeric: 'Numérique',
+        date: 'Date',
+        phone: 'Téléphone',
+        advanced: 'Avancé'
+    };
+    
+    Object.entries(categories).forEach(([cat, label]) => {
+        const ops = OPERATORS.filter(op => op.category === cat);
+        if (ops.length > 0) {
+            html += `<optgroup label="${label}">`;
+            ops.forEach(op => {
+                const selected = op.value === value ? 'selected' : '';
+                html += `<option value="${op.value}" ${selected}>${op.label}</option>`;
+            });
+            html += '</optgroup>';
+        }
     });
+    
     html += '</select>';
     return html;
 }
 
-function renderValueInput(operator, value = '') {
-    if (operator === 'is_empty' || operator === 'not_empty') {
-        return '<div class="w-full rounded-lg border border-slate-600 bg-slate-800/50 px-3 py-2 text-slate-500 text-sm">(aucune valeur requise)</div>';
+function renderValueInput(operator, value = '', className = 'value-input') {
+    if (NO_VALUE_OPERATORS.includes(operator)) {
+        return `<div class="${className} w-full rounded-lg border border-slate-600 bg-slate-800/50 px-3 py-2 text-slate-500 text-sm italic">
+            (aucune valeur requise)
+        </div>`;
     }
-    return `<input type="text" class="value-input w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm placeholder-slate-500" placeholder="Ex: 75001 ou Paris, Lyon..." value="${escapeHtml(value)}">`;
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+    
+    let placeholder = 'Valeur...';
+    if (operator === 'between' || operator === 'in_date_range') {
+        placeholder = 'Ex: 10,50 ou 2024-01-01,2024-12-31';
+    } else if (operator === 'in_list' || operator === 'not_in_list') {
+        placeholder = 'Ex: Paris,Lyon,Marseille';
+    } else if (operator === 'phone_country') {
+        placeholder = 'Ex: FR, US, GB';
+    }
+    
+    return `<input type="text" 
+                   class="${className} w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm placeholder-slate-500 focus:border-blue-500 focus:outline-none" 
+                   placeholder="${placeholder}" 
+                   value="${escapeHtml(value)}">`;
 }
 
 function renderRule(rule, index) {
     return `
-        <div class="rule-item flex flex-wrap gap-2 items-end p-4 rounded-xl bg-slate-800/50 border border-slate-700/50" data-index="${index}">
-            <div class="flex-1 min-w-[120px]">
-                <label class="block text-xs text-slate-500 mb-1">Champ</label>
+        <div class="rule-item flex flex-wrap gap-3 items-end p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-slate-600/50 transition-all" 
+             data-index="${index}">
+            <div class="flex-1 min-w-[160px]">
+                <label class="block text-xs text-slate-500 mb-1 font-medium">Champ</label>
                 ${renderFieldSelect(rule.field)}
             </div>
-            <div class="flex-1 min-w-[140px]">
-                <label class="block text-xs text-slate-500 mb-1">Opérateur</label>
+            <div class="flex-1 min-w-[180px]">
+                <label class="block text-xs text-slate-500 mb-1 font-medium">Opérateur</label>
                 ${renderOperatorSelect(rule.operator)}
             </div>
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs text-slate-500 mb-1">Valeur</label>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs text-slate-500 mb-1 font-medium">Valeur</label>
                 ${renderValueInput(rule.operator, rule.value)}
             </div>
-            <button type="button" class="remove-rule-btn p-2 rounded-lg text-red-400 hover:bg-red-900/30">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <button type="button" class="remove-rule-btn p-2 rounded-lg text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors">
+                {% lucide "trash-2" class="w-5 h-5" %}
             </button>
         </div>
     `;
@@ -160,46 +343,84 @@ function renderGroup(group, groupIndex) {
     let rulesHtml = '';
     group.rules.forEach((rule, ruleIndex) => {
         rulesHtml += `
-            <div class="sub-rule-item flex flex-wrap gap-2 items-end p-3 rounded-lg bg-slate-800/40 border border-slate-700/30 mb-2" data-group-index="${groupIndex}" data-rule-index="${ruleIndex}">
-                <div class="flex-1 min-w-[120px]">
-                    <select class="sub-field w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">
-                        ${FILTER_FIELDS.map(f => `<option value="${f.value}" ${f.value === rule.field ? 'selected' : ''}>${f.label}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="flex-1 min-w-[140px]">
-                    <select class="sub-operator w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm">
-                        ${OPERATORS.map(op => `<option value="${op.value}" ${op.value === rule.operator ? 'selected' : ''}>${op.label}</option>`).join('')}
-                    </select>
-                </div>
+            <div class="sub-rule-item flex flex-wrap gap-3 items-end p-3 rounded-lg bg-slate-800/40 border border-slate-700/30 mb-2" 
+                 data-group-index="${groupIndex}" data-rule-index="${ruleIndex}">
                 <div class="flex-1 min-w-[160px]">
-                    ${renderValueInput(rule.operator, rule.value)}
+                    ${renderFieldSelect(rule.field, 'sub-field')}
                 </div>
-                <button type="button" class="remove-sub-rule-btn p-2 rounded-lg text-red-400 hover:bg-red-900/30">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <div class="flex-1 min-w-[180px]">
+                    ${renderOperatorSelect(rule.operator, 'sub-operator')}
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    ${renderValueInput(rule.operator, rule.value, 'sub-value')}
+                </div>
+                <button type="button" class="remove-sub-rule-btn p-2 rounded-lg text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors">
+                    {% lucide "x" class="w-5 h-5" %}
                 </button>
             </div>
         `;
     });
     
+    const logicColor = group.logic === 'AND' ? 'blue' : 'purple';
+    const logicLabel = group.logic === 'AND' ? 'ET (AND)' : 'OU (OR)';
+    
     return `
-        <div class="group-item rounded-xl bg-slate-700/30 border border-purple-500/30 p-4 mb-3" data-group-index="${groupIndex}">
+        <div class="group-item rounded-xl bg-gradient-to-br from-purple-900/20 to-slate-800/50 border-2 border-purple-500/30 p-4 mb-3" 
+             data-group-index="${groupIndex}">
             <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-purple-300">Sous-groupe</span>
-                    <button type="button" class="toggle-group-logic-btn px-2 py-1 rounded text-xs font-medium ${group.logic === 'AND' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}">
-                        ${group.logic === 'AND' ? 'ET (AND)' : 'OU (OR)'}
+                <div class="flex items-center gap-3">
+                    <span class="flex items-center gap-1">
+                        {% lucide "layers" class="w-4 h-4 text-purple-400" %}
+                        <span class="text-sm font-medium text-purple-300">Sous-groupe</span>
+                    </span>
+                    <button type="button" 
+                            class="toggle-group-logic-btn px-3 py-1 rounded-lg text-xs font-medium transition-all
+                                   bg-${logicColor}-900/50 text-${logicColor}-400 border border-${logicColor}-400/30
+                                   hover:bg-${logicColor}-900/70">
+                        ${logicLabel}
                     </button>
                 </div>
-                <button type="button" class="remove-group-btn text-red-400 hover:text-red-300 text-sm">
-                    Supprimer groupe
+                <button type="button" class="remove-group-btn px-3 py-1 rounded-lg text-red-400 hover:bg-red-900/30 hover:text-red-300 text-sm transition-colors">
+                    {% lucide "trash-2" class="w-4 h-4 inline" %}
+                    Supprimer
                 </button>
             </div>
             <div class="ml-4 space-y-2">
                 ${rulesHtml}
-                <button type="button" class="add-sub-rule-btn mt-2 text-sm text-blue-400 hover:text-blue-300">
-                    + Ajouter règle dans ce groupe
+                <button type="button" 
+                        class="add-sub-rule-btn mt-2 text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+                    {% lucide "plus" class="w-3 h-3" %}
+                    Ajouter une règle dans ce groupe
                 </button>
             </div>
+        </div>
+    `;
+}
+
+function renderScoringRule(rule, index) {
+    return `
+        <div class="scoring-item flex flex-wrap gap-3 items-end p-4 rounded-xl bg-slate-800/50 border border-yellow-500/30" 
+             data-index="${index}">
+            <div class="flex-1 min-w-[160px]">
+                <label class="block text-xs text-slate-500 mb-1">Champ</label>
+                ${renderFieldSelect(rule.field, 'scoring-field')}
+            </div>
+            <div class="flex-1 min-w-[180px]">
+                <label class="block text-xs text-slate-500 mb-1">Opérateur</label>
+                ${renderOperatorSelect(rule.operator, 'scoring-operator')}
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs text-slate-500 mb-1">Valeur</label>
+                ${renderValueInput(rule.operator, rule.value, 'scoring-value')}
+            </div>
+            <div class="w-24">
+                <label class="block text-xs text-slate-500 mb-1">Points</label>
+                <input type="number" class="scoring-points w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white text-sm" 
+                       value="${rule.points || 0}" min="-100" max="100">
+            </div>
+            <button type="button" class="remove-scoring-btn p-2 rounded-lg text-red-400 hover:bg-red-900/30 transition-colors">
+                {% lucide "trash-2" class="w-5 h-5" %}
+            </button>
         </div>
     `;
 }
@@ -213,192 +434,217 @@ function renderAll() {
     if (state.rules.length === 0) {
         container.innerHTML = '';
         if (emptyMsg) emptyMsg.style.display = 'block';
-        return;
+    } else {
+        if (emptyMsg) emptyMsg.style.display = 'none';
+        
+        let html = '';
+        state.rules.forEach((item, index) => {
+            if (item.type === 'rule') {
+                html += renderRule(item, index);
+            } else if (item.type === 'group') {
+                html += renderGroup(item, index);
+            }
+        });
+        container.innerHTML = html;
     }
     
-    if (emptyMsg) emptyMsg.style.display = 'none';
-    
-    let html = '';
-    state.rules.forEach((item, index) => {
-        if (item.type === 'rule') {
-            html += renderRule(item, index);
-        } else if (item.type === 'group') {
-            html += renderGroup(item, index);
-        }
-    });
-    container.innerHTML = html;
-    
-    // Réattacher les événements
+    renderScoring();
     attachEvents();
 }
 
+function renderScoring() {
+    const container = document.getElementById('scoring-container');
+    if (!container) return;
+    
+    if (scoringState.rules.length === 0) {
+        container.innerHTML = '<p class="text-slate-500 text-sm py-4 text-center">Aucun critère de scoring défini</p>';
+        return;
+    }
+    
+    let html = '';
+    scoringState.rules.forEach((rule, index) => {
+        html += renderScoringRule(rule, index);
+    });
+    container.innerHTML = html;
+}
+
+// ============ GESTIONNAIRES D'ÉVÉNEMENTS ============
+
 function attachEvents() {
-    // Supprimer les règles simples
-    document.querySelectorAll('.remove-rule-btn').forEach(btn => {
-        btn.removeEventListener('click', handleRemoveRule);
-        btn.addEventListener('click', handleRemoveRule);
+    // Règles principales
+    document.querySelectorAll('.remove-rule-btn').forEach((btn, idx) => {
+        btn.onclick = () => {
+            const ruleItem = btn.closest('.rule-item');
+            if (ruleItem) {
+                const index = parseInt(ruleItem.dataset.index);
+                state.rules.splice(index, 1);
+                renderAll();
+            }
+        };
     });
     
-    // Supprimer les groupes
-    document.querySelectorAll('.remove-group-btn').forEach(btn => {
-        btn.removeEventListener('click', handleRemoveGroup);
-        btn.addEventListener('click', handleRemoveGroup);
-    });
-    
-    // Basculer logique des groupes
-    document.querySelectorAll('.toggle-group-logic-btn').forEach(btn => {
-        btn.removeEventListener('click', handleToggleGroupLogic);
-        btn.addEventListener('click', handleToggleGroupLogic);
-    });
-    
-    // Ajouter sous-règle
-    document.querySelectorAll('.add-sub-rule-btn').forEach(btn => {
-        btn.removeEventListener('click', handleAddSubRule);
-        btn.addEventListener('click', handleAddSubRule);
-    });
-    
-    // Supprimer sous-règle
-    document.querySelectorAll('.remove-sub-rule-btn').forEach(btn => {
-        btn.removeEventListener('click', handleRemoveSubRule);
-        btn.addEventListener('click', handleRemoveSubRule);
-    });
-    
-    // Champs des règles simples
     document.querySelectorAll('.rule-item .field-select').forEach((select, idx) => {
-        select.removeEventListener('change', (e) => handleFieldChange(idx, e));
-        select.addEventListener('change', (e) => handleFieldChange(idx, e));
+        select.onchange = (e) => {
+            const ruleItem = select.closest('.rule-item');
+            if (ruleItem) {
+                const index = parseInt(ruleItem.dataset.index);
+                if (state.rules[index]?.type === 'rule') {
+                    state.rules[index].field = e.target.value;
+                }
+            }
+        };
     });
     
     document.querySelectorAll('.rule-item .operator-select').forEach((select, idx) => {
-        select.removeEventListener('change', (e) => handleOperatorChange(idx, e));
-        select.addEventListener('change', (e) => handleOperatorChange(idx, e));
+        select.onchange = (e) => {
+            const ruleItem = select.closest('.rule-item');
+            if (ruleItem) {
+                const index = parseInt(ruleItem.dataset.index);
+                if (state.rules[index]?.type === 'rule') {
+                    state.rules[index].operator = e.target.value;
+                    renderAll();
+                }
+            }
+        };
     });
     
     document.querySelectorAll('.rule-item .value-input').forEach((input, idx) => {
-        input.removeEventListener('input', (e) => handleValueChange(idx, e));
-        input.addEventListener('input', (e) => handleValueChange(idx, e));
+        input.oninput = (e) => {
+            const ruleItem = input.closest('.rule-item');
+            if (ruleItem) {
+                const index = parseInt(ruleItem.dataset.index);
+                if (state.rules[index]?.type === 'rule') {
+                    state.rules[index].value = e.target.value;
+                }
+            }
+        };
     });
     
-    // Champs des sous-règles
+    // Groupes
+    document.querySelectorAll('.remove-group-btn').forEach(btn => {
+        btn.onclick = () => {
+            const groupItem = btn.closest('.group-item');
+            if (groupItem) {
+                const index = parseInt(groupItem.dataset.groupIndex);
+                state.rules.splice(index, 1);
+                renderAll();
+            }
+        };
+    });
+    
+    document.querySelectorAll('.toggle-group-logic-btn').forEach(btn => {
+        btn.onclick = () => {
+            const groupItem = btn.closest('.group-item');
+            if (groupItem) {
+                const index = parseInt(groupItem.dataset.groupIndex);
+                if (state.rules[index]?.type === 'group') {
+                    state.rules[index].logic = state.rules[index].logic === 'AND' ? 'OR' : 'AND';
+                    renderAll();
+                }
+            }
+        };
+    });
+    
+    document.querySelectorAll('.add-sub-rule-btn').forEach(btn => {
+        btn.onclick = () => {
+            const groupItem = btn.closest('.group-item');
+            if (groupItem) {
+                const index = parseInt(groupItem.dataset.groupIndex);
+                if (state.rules[index]?.type === 'group') {
+                    state.rules[index].rules.push({
+                        field: DEFAULT_FIELD,
+                        operator: 'equals',
+                        value: ''
+                    });
+                    renderAll();
+                }
+            }
+        };
+    });
+    
+    // Sous-règles
     document.querySelectorAll('.sub-rule-item').forEach(container => {
         const groupIndex = parseInt(container.dataset.groupIndex);
         const ruleIndex = parseInt(container.dataset.ruleIndex);
         
-        const fieldSelect = container.querySelector('.sub-field');
-        const operatorSelect = container.querySelector('.sub-operator');
-        const valueInput = container.querySelector('.value-input');
+        container.querySelector('.remove-sub-rule-btn').onclick = () => {
+            if (state.rules[groupIndex]?.type === 'group') {
+                state.rules[groupIndex].rules.splice(ruleIndex, 1);
+                renderAll();
+            }
+        };
         
-        if (fieldSelect) {
-            fieldSelect.removeEventListener('change', (e) => handleSubFieldChange(groupIndex, ruleIndex, e));
-            fieldSelect.addEventListener('change', (e) => handleSubFieldChange(groupIndex, ruleIndex, e));
-        }
-        if (operatorSelect) {
-            operatorSelect.removeEventListener('change', (e) => handleSubOperatorChange(groupIndex, ruleIndex, e));
-            operatorSelect.addEventListener('change', (e) => handleSubOperatorChange(groupIndex, ruleIndex, e));
-        }
+        container.querySelector('.sub-field').onchange = (e) => {
+            if (state.rules[groupIndex]?.type === 'group') {
+                state.rules[groupIndex].rules[ruleIndex].field = e.target.value;
+            }
+        };
+        
+        container.querySelector('.sub-operator').onchange = (e) => {
+            if (state.rules[groupIndex]?.type === 'group') {
+                state.rules[groupIndex].rules[ruleIndex].operator = e.target.value;
+                renderAll();
+            }
+        };
+        
+        const valueInput = container.querySelector('.sub-value');
         if (valueInput) {
-            valueInput.removeEventListener('input', (e) => handleSubValueChange(groupIndex, ruleIndex, e));
-            valueInput.addEventListener('input', (e) => handleSubValueChange(groupIndex, ruleIndex, e));
+            valueInput.oninput = (e) => {
+                if (state.rules[groupIndex]?.type === 'group') {
+                    state.rules[groupIndex].rules[ruleIndex].value = e.target.value;
+                }
+            };
         }
+    });
+    
+    // Scoring
+    document.querySelectorAll('.remove-scoring-btn').forEach((btn, idx) => {
+        btn.onclick = () => {
+            const item = btn.closest('.scoring-item');
+            if (item) {
+                const index = parseInt(item.dataset.index);
+                scoringState.rules.splice(index, 1);
+                renderAll();
+            }
+        };
+    });
+    
+    document.querySelectorAll('.scoring-field').forEach((select, idx) => {
+        select.onchange = (e) => {
+            if (scoringState.rules[idx]) {
+                scoringState.rules[idx].field = e.target.value;
+            }
+        };
+    });
+    
+    document.querySelectorAll('.scoring-operator').forEach((select, idx) => {
+        select.onchange = (e) => {
+            if (scoringState.rules[idx]) {
+                scoringState.rules[idx].operator = e.target.value;
+                renderAll();
+            }
+        };
+    });
+    
+    document.querySelectorAll('.scoring-value').forEach((input, idx) => {
+        input.oninput = (e) => {
+            if (scoringState.rules[idx]) {
+                scoringState.rules[idx].value = e.target.value;
+            }
+        };
+    });
+    
+    document.querySelectorAll('.scoring-points').forEach((input, idx) => {
+        input.oninput = (e) => {
+            if (scoringState.rules[idx]) {
+                scoringState.rules[idx].points = parseInt(e.target.value) || 0;
+            }
+        };
     });
 }
 
-// Handlers
-function handleRemoveRule(e) {
-    const ruleItem = e.target.closest('.rule-item');
-    if (ruleItem) {
-        const index = parseInt(ruleItem.dataset.index);
-        state.rules.splice(index, 1);
-        renderAll();
-    }
-}
+// ============ ACTIONS PRINCIPALES ============
 
-function handleRemoveGroup(e) {
-    const groupItem = e.target.closest('.group-item');
-    if (groupItem) {
-        const index = parseInt(groupItem.dataset.groupIndex);
-        state.rules.splice(index, 1);
-        renderAll();
-    }
-}
-
-function handleToggleGroupLogic(e) {
-    const groupItem = e.target.closest('.group-item');
-    if (groupItem) {
-        const index = parseInt(groupItem.dataset.groupIndex);
-        if (state.rules[index] && state.rules[index].type === 'group') {
-            state.rules[index].logic = state.rules[index].logic === 'AND' ? 'OR' : 'AND';
-            renderAll();
-        }
-    }
-}
-
-function handleAddSubRule(e) {
-    const groupItem = e.target.closest('.group-item');
-    if (groupItem) {
-        const index = parseInt(groupItem.dataset.groupIndex);
-        if (state.rules[index] && state.rules[index].type === 'group') {
-            state.rules[index].rules.push({
-                field: DEFAULT_FIELD,
-                operator: 'equals',
-                value: ''
-            });
-            renderAll();
-        }
-    }
-}
-
-function handleRemoveSubRule(e) {
-    const subRuleItem = e.target.closest('.sub-rule-item');
-    if (subRuleItem) {
-        const groupIndex = parseInt(subRuleItem.dataset.groupIndex);
-        const ruleIndex = parseInt(subRuleItem.dataset.ruleIndex);
-        if (state.rules[groupIndex] && state.rules[groupIndex].type === 'group') {
-            state.rules[groupIndex].rules.splice(ruleIndex, 1);
-            renderAll();
-        }
-    }
-}
-
-function handleFieldChange(index, e) {
-    if (state.rules[index] && state.rules[index].type === 'rule') {
-        state.rules[index].field = e.target.value;
-    }
-}
-
-function handleOperatorChange(index, e) {
-    if (state.rules[index] && state.rules[index].type === 'rule') {
-        state.rules[index].operator = e.target.value;
-        renderAll();
-    }
-}
-
-function handleValueChange(index, e) {
-    if (state.rules[index] && state.rules[index].type === 'rule') {
-        state.rules[index].value = e.target.value;
-    }
-}
-
-function handleSubFieldChange(groupIndex, ruleIndex, e) {
-    if (state.rules[groupIndex] && state.rules[groupIndex].type === 'group') {
-        state.rules[groupIndex].rules[ruleIndex].field = e.target.value;
-    }
-}
-
-function handleSubOperatorChange(groupIndex, ruleIndex, e) {
-    if (state.rules[groupIndex] && state.rules[groupIndex].type === 'group') {
-        state.rules[groupIndex].rules[ruleIndex].operator = e.target.value;
-        renderAll();
-    }
-}
-
-function handleSubValueChange(groupIndex, ruleIndex, e) {
-    if (state.rules[groupIndex] && state.rules[groupIndex].type === 'group') {
-        state.rules[groupIndex].rules[ruleIndex].value = e.target.value;
-    }
-}
-
-// Actions principales
 function addRule() {
     state.rules.push({
         type: 'rule',
@@ -422,62 +668,236 @@ function addGroup() {
 function toggleLogic() {
     state.logic = state.logic === 'AND' ? 'OR' : 'AND';
     const btn = document.getElementById('toggleLogicBtn');
-    if (btn) {
-        btn.textContent = state.logic === 'AND' ? 'ET (AND)' : 'OU (OR)';
-        btn.className = state.logic === 'AND' ? 'px-3 md:p-4 py-1 md:py-2 rounded-lg text-sm bg-blue-900/50 text-blue-400 border border-blue-400/20' : 'px-3 md:p-4 py-1 md:py-2 rounded-lg text-sm f bg-indigo-900/50 border border-indigo-400/20 text-indigo-400';
+    const label = document.getElementById('logicLabel');
+    
+    if (state.logic === 'AND') {
+        btn.className = btn.className.replace(/bg-\w+-\d+\/\d+/, 'bg-blue-900/50');
+        btn.className = btn.className.replace(/text-\w+-\d+/, 'text-blue-400');
+        btn.className = btn.className.replace(/border-\w+-\d+\/\d+/, 'border-blue-400/30');
+        label.textContent = 'ET (AND)';
+    } else {
+        btn.className = btn.className.replace(/bg-\w+-\d+\/\d+/, 'bg-purple-900/50');
+        btn.className = btn.className.replace(/text-\w+-\d+/, 'text-purple-400');
+        btn.className = btn.className.replace(/border-\w+-\d+\/\d+/, 'border-purple-400/30');
+        label.textContent = 'OU (OR)';
     }
+}
+
+function addScoringRule() {
+    scoringState.rules.push({
+        field: DEFAULT_FIELD,
+        operator: 'equals',
+        value: '',
+        points: 1
+    });
+    renderAll();
+}
+
+// ============ VALIDATION ET SÉRIALISATION ============
+
+function validateFilters() {
+    const hasValidRules = state.rules.some(item => {
+        if (item.type === 'rule') {
+            const needsValue = !NO_VALUE_OPERATORS.includes(item.operator);
+            return !needsValue || (item.value && item.value.trim() !== '');
+        }
+        if (item.type === 'group') {
+            return item.rules && item.rules.length > 0 && item.rules.some(rule => {
+                const needsValue = !NO_VALUE_OPERATORS.includes(rule.operator);
+                return !needsValue || (rule.value && rule.value.trim() !== '');
+            });
+        }
+        return false;
+    });
+    
+    if (!hasValidRules && state.rules.length > 0) {
+        return confirm('⚠️ Certaines règles sont incomplètes (valeurs manquantes). Voulez-vous continuer ?');
+    }
+    return true;
 }
 
 function serializeFilters() {
     const cleanRules = state.rules.filter(item => {
         if (item.type === 'group') {
-            return item.rules && item.rules.length > 0;
+            if (item.rules && item.rules.length > 0) {
+                item.rules = item.rules.filter(rule => {
+                    const needsValue = !NO_VALUE_OPERATORS.includes(rule.operator);
+                    return !needsValue || (rule.value && rule.value.trim() !== '');
+                });
+                return item.rules.length > 0;
+            }
+            return false;
+        }
+        if (item.type === 'rule') {
+            const needsValue = !NO_VALUE_OPERATORS.includes(item.operator);
+            return !needsValue || (item.value && item.value.trim() !== '');
         }
         return true;
     });
     
-    const config = {
+    return {
         logic: state.logic,
         rules: cleanRules
     };
-    
-    document.getElementById('filtersConfig').value = JSON.stringify(config);
-    return config;
 }
 
-// Initialisation
+function serializeScoring() {
+    return scoringState.rules.filter(rule => {
+        const needsValue = !NO_VALUE_OPERATORS.includes(rule.operator);
+        return rule.field && rule.operator && rule.points && 
+               (!needsValue || (rule.value && rule.value.trim() !== ''));
+    });
+}
+
+function showPreview() {
+    const config = serializeFilters();
+    const scoring = serializeScoring();
+    const minScore = document.getElementById('minScore').value;
+    
+    const preview = {
+        filters: config,
+        scoring: scoring,
+        min_score: parseInt(minScore) || 0
+    };
+    
+    document.getElementById('previewContent').textContent = JSON.stringify(preview, null, 2);
+    document.getElementById('previewModal').classList.remove('hidden');
+}
+
+// ============ INITIALISATION ============
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initialisation du filtre...');
+    console.log('🚀 Initialisation du système de filtres...');
     
     // Charger configuration existante
-    const existingConfig = {{ filters_config|default:'null'|safe }};
-    if (existingConfig && existingConfig.rules) {
-        state.logic = existingConfig.logic || 'AND';
-        state.rules = existingConfig.rules;
-        // S'assurer que chaque groupe a un groupId
-        state.rules.forEach((rule, idx) => {
-            if (rule.type === 'group' && !rule.groupId) {
-                rule.groupId = 'group_' + (++state.groupCounter);
-            }
-        });
+    try {
+        const existingConfig = {{ filters_config|default:'null'|safe }};
+        if (existingConfig && existingConfig.rules) {
+            state.logic = existingConfig.logic || 'AND';
+            state.rules = existingConfig.rules.map(rule => {
+                if (rule.type === 'group') {
+                    return {
+                        ...rule,
+                        groupId: rule.groupId || 'group_' + (++state.groupCounter),
+                        rules: rule.rules || []
+                    };
+                }
+                return {
+                    ...rule,
+                    field: rule.field || DEFAULT_FIELD,
+                    operator: rule.operator || 'equals',
+                    value: rule.value || ''
+                };
+            });
+        }
+    } catch(e) {
+        console.log('Aucune configuration existante');
     }
     
-    // Mettre à jour le bouton de logique
-   
-    // Attacher les événements des boutons principaux
+    // Charger scoring existant
+    try {
+        const existingScoring = {{ scoring_config|default:'null'|safe }};
+        if (existingScoring && Array.isArray(existingScoring)) {
+            scoringState.rules = existingScoring;
+        }
+    } catch(e) {
+        console.log('Aucun scoring existant');
+    }
+    
+    // Attacher les événements
     document.getElementById('addRuleBtn')?.addEventListener('click', addRule);
     document.getElementById('addGroupBtn')?.addEventListener('click', addGroup);
     document.getElementById('toggleLogicBtn')?.addEventListener('click', toggleLogic);
+    document.getElementById('addScoringBtn')?.addEventListener('click', addScoringRule);
+    document.getElementById('previewBtn')?.addEventListener('click', showPreview);
+    document.getElementById('closePreviewBtn')?.addEventListener('click', () => {
+        document.getElementById('previewModal').classList.add('hidden');
+    });
+    
+    // Fermer le modal en cliquant à l'extérieur
+    document.getElementById('previewModal')?.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('previewModal')) {
+            document.getElementById('previewModal').classList.add('hidden');
+        }
+    });
+    
+    // Soumission du formulaire
+    document.getElementById('filterForm')?.addEventListener('submit', function(e) {
+        if (!validateFilters()) {
+            e.preventDefault();
+            return;
+        }
+        
+        const filtersConfig = serializeFilters();
+        const scoringConfig = serializeScoring();
+        
+        document.getElementById('filtersConfig').value = JSON.stringify(filtersConfig);
+        document.getElementById('scoringConfig').value = JSON.stringify(scoringConfig);
+        
+        console.log('✅ Configuration sauvegardée:', { filters: filtersConfig, scoring: scoringConfig });
+    });
     
     // Rendu initial
     renderAll();
     
-    // Sérialisation avant soumission
-    document.getElementById('filterForm')?.addEventListener('submit', function(e) {
-        serializeFilters();
-    });
+    // Mettre à jour le bouton de logique
+    if (state.logic === 'OR') {
+        const btn = document.getElementById('toggleLogicBtn');
+        const label = document.getElementById('logicLabel');
+        btn.className = btn.className.replace(/bg-blue-\d+\/\d+/, 'bg-purple-900/50');
+        btn.className = btn.className.replace(/text-blue-\d+/, 'text-purple-400');
+        btn.className = btn.className.replace(/border-blue-\d+\/\d+/, 'border-purple-400/30');
+        label.textContent = 'OU (OR)';
+    }
     
-    console.log('Initialisation terminée');
+    console.log('✨ Système de filtres prêt !');
 });
 </script>
+
+<style>
+/* Animations et styles supplémentaires */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rule-item, .group-item, .scoring-item {
+    animation: slideIn 0.3s ease-out;
+}
+
+#previewModal {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Scrollbar personnalisée */
+#previewContent::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#previewContent::-webkit-scrollbar-track {
+    background: #1e293b;
+    border-radius: 4px;
+}
+
+#previewContent::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+#previewContent::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+</style>
 {% endblock %}
