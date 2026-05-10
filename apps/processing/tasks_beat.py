@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def cleanup_expired_files():
-    """
-    delete expired uploaded files and processing history records, along with their associated files on disk.
-    """
+   
     now = timezone.now()
     
     # 1. Supprimer les fichiers uploadés expirés

@@ -40,3 +40,6 @@ htmlcov/
 .coverage
 
 test_file.csv
+db.sqlite
+/db.sqlite3
+./db.sqlite3

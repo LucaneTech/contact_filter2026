@@ -111,15 +111,17 @@ def process_uploaded_file(self, upload_id: int):
         logger.info("Application des filtres et calcul des scores...")
         
         try:
+            alias_map = {v: k for k, v in mapping.items()}
             # Appliquer les filtres avec la fonction principale
             filtered_rows, valid_phones_count, rejected_count = filter_and_score_rows(
                 standard_rows,
                 filters_config=filters_config,
                 scoring_config=scoring_rules,
                 min_score=min_score,
-                phone_field='phone',  # Champ standard pour le téléphone
-                default_region='FR',  # Région par défaut
-                enrich=True  # Ajouter les métadonnées
+                phone_field='tel',  
+                default_region='FR',  
+                enrich=False,
+                alias_map=alias_map,  
             )
             
             # Récupérer les statistiques du cache
@@ -170,7 +172,7 @@ def process_uploaded_file(self, upload_id: int):
         # ========== ÉTAPE 6: HISTORIQUE ==========
         logger.info("Création de l'historique...")
         
-        expires = timezone.now() + timedelta(days=settings.HISTORIC_FILE_EXPIRATION_TIME)
+        expires = timezone.now() + timedelta(hours=24)
         
         # Préparer les données pour l'historique
         history_data = {

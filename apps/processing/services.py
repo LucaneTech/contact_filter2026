@@ -37,12 +37,22 @@ def read_file_to_rows(upload) -> tuple[List[Dict], List[str]]:
     return [], []
 
 
-def get_standard_row(raw: Dict, columns: List[str], mapping: Dict[str, str]) -> Dict[str, Any]:
-    """Mappe une ligne brute vers les champs standard. mapping: {source_col: target_field}"""
+
+
+def get_standard_row(raw, columns, mapping):
     result = {}
     for col in columns:
         val = raw.get(col, raw.get(str(col), ''))
         std_field = mapping.get(col) or mapping.get(str(col))
         key = std_field if std_field else col
+        # Normaliser la valeur
+        if val is None or str(val) in ('NaT', 'nan', 'None'):
+            val = ''
+        else:
+            val = str(val).strip()
         result[key] = val
+
+    # Retourner None si aucune valeur utile (ligne vide)
+    if not any(result.values()):
+        return None
     return result

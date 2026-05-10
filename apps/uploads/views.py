@@ -37,7 +37,7 @@ def upload_view(request):
                 company=company,
                 file=f,
                 original_name=f.name,
-                expires_at=timezone.now() + timedelta(days=settings.UPLOADED_FILE_EXPIRATION_TIME),
+                expires_at=timezone.now() + timedelta(minutes=settings.UPLOADED_FILE_EXPIRATION_TIME),
                 columns_detected=columns,
                 column_mapping=mapping,
             )
@@ -64,7 +64,6 @@ def upload_view(request):
 
 
 def validate_filter_config(config: dict) -> tuple[bool, str]:
-    """Valide la configuration des filtres (supporte l'imbrication)."""
     
     if not config:
         return True, "Configuration vide"
