@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% load static tailwind_tags %}
+{% load static %}
+{% load lucide %}
+
+
+{% block body %}
+<div class="flex h-screen overflow-hidden bg-slate-50"
+     x-data="{
+         collapsed: JSON.parse(localStorage.getItem('sidebarCollapsed') || 'false'),
+         mobileOpen: false,
+         userMenu: false,
+         toggle() {
+             this.collapsed = !this.collapsed;
+             localStorage.setItem('sidebarCollapsed', JSON.stringify(this.collapsed));
+         }
+     }">
+
+    <!-- Overlay mobile -->
+    <div x-cloak x-show="mobileOpen"
+         x-transition:enter="transition-opacity duration-200 ease-out"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity duration-150 ease-in"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="mobileOpen = false"
+         class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden">
+    </div>
+
+    <!-- ═══ SIDEBAR — Dark premium ═══ -->
+    <aside class="fixed inset-y-0 left-0 z-50 flex flex-col
+                  bg-gray-950 border-r border-white/5
+                  transition-all duration-300 ease-in-out
+                  lg:static lg:z-auto lg:translate-x-0"
+           :style="'width:' + (collapsed ? '68px' : '256px')"
+           :class="mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+
+        <!-- Brand -->
+        <div class="relative flex h-16 shrink-0 items-center overflow-hidden border-b border-white/5 px-4">
+            <div class="flex min-w-0 items-center gap-3">
+                <a href="{% url 'dashboard:admin_dashboard' %}"
+                   class="flex shrink-0 items-center justify-center ">
+                    <img src="{% static 'images/logo.png' %}" alt="Logo"
+                         class="h-24 w-24 shrink-0 object-contain brightness-200">
+                </a>
+                <div class="flex min-w-0 items-center gap-2 overflow-hidden transition-all duration-300"
+                     :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">
+                   
+                    <span class="whitespace-nowrap rounded-md bg-indigo-500/20 border border-indigo-500/30
+                                 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400 uppercase tracking-wider">
+                        Admin
+                    </span>
+                </div>
+            </div>
+            <!-- Collapse toggle -->
+            <button @click="toggle()"
+                    class="absolute -right-3 top-1/2 hidden -translate-y-1/2 lg:flex
+                           h-6 w-6 items-center justify-center rounded-full
+                           border border-white/10 bg-gray-900 text-slate-500 shadow-md
+                           hover:border-white/20 hover:text-slate-300 transition-all">
+                <svg class="w-3 h-3 transition-transform duration-300"
+                     :class="collapsed ? 'rotate-180' : ''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4">
+
+            {% with name=request.resolver_match.url_name %}
+            {% block sidebar_items %}
+
+            <!-- Général -->
+            <div class="mb-2 overflow-hidden px-2 transition-all duration-300"
+                 :class="collapsed ? 'h-0 opacity-0 mb-0' : 'h-auto'">
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-600">Général</p>
+            </div>
+
+            <a href="{% url 'dashboard:admin_dashboard' %}"
+               :title="collapsed ? 'Vue d\'ensemble' : ''"
+               class="group relative mb-0.5 flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-all duration-150
+                      {% if name == 'admin_dashboard' %}bg-indigo-500/10 text-indigo-400{% else %}text-slate-500 hover:bg-white/5 hover:text-slate-200{% endif %}">
+                {% if name == 'admin_dashboard' %}<span class="absolute left-0 top-1.5 h-6 w-0.5 rounded-r-full bg-indigo-500"></span>{% endif %}
+                {% lucide "layout-dashboard" class="w-4 h-4 shrink-0" %}
+                <span class="overflow-hidden whitespace-nowrap transition-all duration-300" :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Vue d'ensemble</span>
+            </a>
+
+            <!-- Gestion -->
+            <div class="mb-2 mt-5 overflow-hidden px-2 transition-all duration-300"
+                 :class="collapsed ? 'h-0 opacity-0 mt-2 mb-0' : 'h-auto opacity-100'">
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-600">Gestion</p>
+            </div>
+
+            <a href="{% url 'dashboard:admin_companies' %}"
+               :title="collapsed ? 'Entreprises' : ''"
+               class="group relative mb-0.5 flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-all duration-150
+                      {% if 'compan' in name %}bg-indigo-500/10 text-indigo-400{% else %}text-slate-500 hover:bg-white/5 hover:text-slate-200{% endif %}">
+                {% if 'compan' in name %}<span class="absolute left-0 top-1.5 h-6 w-0.5 rounded-r-full bg-indigo-500"></span>{% endif %}
+                {% lucide "building-2" class="w-4 h-4 shrink-0" %}
+                <span class="overflow-hidden whitespace-nowrap transition-all duration-300" :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Entreprises</span>
+            </a>
+
+            <a href="{% url 'dashboard:admin_users' %}"
+               :title="collapsed ? 'Utilisateurs' : ''"
+               class="group relative mb-0.5 flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-all duration-150
+                      {% if 'user' in name %}bg-indigo-500/10 text-indigo-400{% else %}text-slate-500 hover:bg-white/5 hover:text-slate-200{% endif %}">
+                {% if 'user' in name %}<span class="absolute left-0 top-1.5 h-6 w-0.5 rounded-r-full bg-indigo-500"></span>{% endif %}
+                {% lucide "users" class="w-4 h-4 shrink-0" %}
+                <span class="overflow-hidden whitespace-nowrap transition-all duration-300" :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Utilisateurs</span>
+            </a>
+
+            <a href="{% url 'dashboard:admin_plans' %}"
+               :title="collapsed ? 'Plans & Tarifs' : ''"
+               class="group relative mb-0.5 flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-all duration-150
+                      {% if 'plan' in name %}bg-indigo-500/10 text-indigo-400{% else %}text-slate-500 hover:bg-white/5 hover:text-slate-200{% endif %}">
+                {% if 'plan' in name %}<span class="absolute left-0 top-1.5 h-6 w-0.5 rounded-r-full bg-indigo-500"></span>{% endif %}
+                {% lucide "credit-card" class="w-4 h-4 shrink-0" %}
+                <span class="overflow-hidden whitespace-nowrap transition-all duration-300" :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Plans & Tarifs</span>
+            </a>
+
+            <!-- Activité -->
+            <div class="mb-2 mt-5 overflow-hidden px-2 transition-all duration-300"
+                 :class="collapsed ? 'h-0 opacity-0 mt-2 mb-0' : 'h-auto opacity-100'">
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-600">Activité</p>
+            </div>
+
+            <a href="{% url 'dashboard:admin_uploads' %}"
+               :title="collapsed ? 'Traitements' : ''"
+               class="group relative mb-0.5 flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-all duration-150
+                      {% if 'upload' in name %}bg-indigo-500/10 text-indigo-400{% else %}text-slate-500 hover:bg-white/5 hover:text-slate-200{% endif %}">
+                {% if 'upload' in name %}<span class="absolute left-0 top-1.5 h-6 w-0.5 rounded-r-full bg-indigo-500"></span>{% endif %}
+                {% lucide "file-up" class="w-4 h-4 shrink-0" %}
+                <span class="overflow-hidden whitespace-nowrap transition-all duration-300" :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Traitements</span>
+            </a>
+
+            <a href="{% url 'dashboard:admin_histories' %}"
+               :title="collapsed ? 'Historiques' : ''"
+               class="group relative mb-0.5 flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-all duration-150
+                      {% if 'histor' in name %}bg-indigo-500/10 text-indigo-400{% else %}text-slate-500 hover:bg-white/5 hover:text-slate-200{% endif %}">
+                {% if 'histor' in name %}<span class="absolute left-0 top-1.5 h-6 w-0.5 rounded-r-full bg-indigo-500"></span>{% endif %}
+                {% lucide "clock" class="w-4 h-4 shrink-0" %}
+                <span class="overflow-hidden whitespace-nowrap transition-all duration-300" :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">Historiques</span>
+            </a>
+
+            {% endblock sidebar_items %}
+            {% endwith %}
+        </nav>
+
+        <!-- User footer -->
+        <div class="shrink-0 overflow-hidden border-t border-white/5 p-3">
+            <div class="flex min-w-0 items-center gap-2.5">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+                            bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-semibold text-white shadow-md">
+                    {{ request.user.email|slice:":1"|upper }}
+                </div>
+                <div class="min-w-0 overflow-hidden transition-all duration-300"
+                     :class="collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">
+                    <p class="truncate whitespace-nowrap text-xs font-medium text-slate-300">{{ request.user.email }}</p>
+                    <p class="whitespace-nowrap text-[10px] text-slate-600">Administrateur</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══ Colonne principale ═══ -->
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+
+        <!-- Navbar -->
+        <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3
+                       border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6 shadow-sm">
+            <button @click="mobileOpen = !mobileOpen"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+                           text-slate-500 transition-colors hover:bg-slate-100 lg:hidden">
+                {% lucide "menu" class="w-4 h-4" %}
+            </button>
+            <div class="min-w-0 flex-1">
+                {% block admin_breadcrumb %}
+                <h1 class="truncate text-sm font-semibold text-slate-900">Administration</h1>
+                {% endblock %}
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+                {% block header_actions %}{% endblock %}
+                <div class="h-5 w-px bg-slate-200 mx-1"></div>
+                <div class="relative" @click.away="userMenu = false">
+                    <button @click="userMenu = !userMenu"
+                            class="flex items-center gap-2 rounded-lg px-2 py-1.5 border border-transparent
+                                   text-slate-700 transition-all hover:bg-slate-100 hover:border-slate-200">
+                        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                                    bg-gradient-to-br from-indigo-500 to-violet-600 text-[11px] font-semibold text-white shadow-sm">
+                            {{ request.user.email|slice:":1"|upper }}
+                        </div>
+                        <span class="hidden text-xs font-medium sm:block text-slate-700">{{ request.user.email|truncatechars:18 }}</span>
+                        <svg class="h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200"
+                             :class="userMenu ? 'rotate-180' : ''"
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div x-cloak x-show="userMenu"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 -translate-y-1 scale-95"
+                         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                         x-transition:leave-end="opacity-0 -translate-y-1 scale-95"
+                         class="absolute right-0 top-full z-50 mt-2 w-56
+                                rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl shadow-slate-900/10">
+                        <div class="border-b border-slate-100 px-4 py-3">
+                            <p class="truncate text-xs font-semibold text-slate-900">{{ request.user.email }}</p>
+                            <p class="mt-0.5 text-[10px] text-slate-400">Administrateur plateforme</p>
+                        </div>
+                        <a href="{% url 'accounts:profile' %}"
+                           class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                            {% lucide "user" class="w-3.5 h-3.5 text-slate-400" %} Mon profil
+                        </a>
+                        <a href="{% url 'dashboard:company_dashboard' %}"
+                           class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                            {% lucide "layout-dashboard" class="w-3.5 h-3.5 text-slate-400" %} Dashboard client
+                        </a>
+                        <div class="mt-1 border-t border-slate-100 pt-1">
+                            <form method="post" action="{% url 'accounts:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                    {% lucide "log-out" class="w-3.5 h-3.5" %} Déconnexion
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenu -->
+        <main class="flex-1 overflow-y-auto bg-slate-50">
+            <div class="mx-auto max-w-7xl px-4 py-7 sm:px-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+(function () {
+    setTimeout(function () {
+        var c = document.getElementById('messageContainer');
+        if (!c) return;
+        c.querySelectorAll('.message-item').forEach(function (el) {
+            el.style.transition = 'opacity 0.4s ease';
+            el.style.opacity = '0';
+            setTimeout(function () { el.remove(); }, 450);
+        });
+    }, 4000);
+}());
+</script>
+
+{% block extra_js %}{% endblock %}
+{% block scripts %}{% endblock %}
+
+{% endblock %}

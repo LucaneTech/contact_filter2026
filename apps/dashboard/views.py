@@ -2,10 +2,14 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 from django.utils import timezone
+from django.contrib import messages
+from django.db.models import Q
+from django.core.files.storage import default_storage
 
 from apps.companies.models import Company, UploadedFile, ProcessingHistory
 from apps.companies.decorators import company_required, admin_required
 from apps.billing.models import Plan
+from apps.accounts.models import User
 
 @login_required
 @company_required
@@ -42,19 +46,263 @@ def company_dashboard(request):
 def admin_dashboard(request):
     companies = Company.objects.select_related('user', 'current_plan').order_by('-created_at')
     total_uploads = UploadedFile.objects.count()
-    total_contacts = sum(c.contacts_used_this_month for c in Company.objects.all())
+    total_contacts = Company.objects.values_list('contacts_used_this_month', flat=True)
     active_companies = companies.filter(subscription_status='active').count()
     trial_companies = companies.filter(subscription_status='trial').count()
+    recent_uploads = UploadedFile.objects.select_related('company').order_by('-created_at')[:8]
+    plans = Plan.objects.prefetch_related('companies').order_by('price')
+
+    # Ajouter quota_percent à chaque company
+    for c in companies:
+        c.quota_percent = min(100, (c.contacts_used_this_month / c.monthly_quota * 100) if c.monthly_quota else 0)
 
     context = {
-        'companies': companies,
+        'companies': companies[:8],
         'total_uploads': total_uploads,
-        'total_contacts': total_contacts,
+        'total_contacts': sum(total_contacts),
         'companies_count': companies.count(),
         'active_companies': active_companies,
         'trial_companies': trial_companies,
+        'recent_uploads': recent_uploads,
+        'plans': plans,
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
+
+
+# ── ENTREPRISES ────────────────────────────────────────────────────────────────
+
+@login_required
+@admin_required
+def admin_companies(request):
+    qs = Company.objects.select_related('user', 'current_plan').order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '')
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(user__email__icontains=q))
+    if status:
+        qs = qs.filter(subscription_status=status)
+    for c in qs:
+        c.quota_percent = min(100, (c.contacts_used_this_month / c.monthly_quota * 100) if c.monthly_quota else 0)
+    return render(request, 'dashboard/admin_companies.html', {'companies': qs})
+
+
+@login_required
+@admin_required
+def admin_company_edit(request, pk):
+    company = get_object_or_404(Company, pk=pk)
+    plans = Plan.objects.filter(is_active=True).order_by('price')
+
+    if request.method == 'POST':
+        company.name = request.POST.get('name', company.name).strip()
+        company.subscription_status = request.POST.get('subscription_status', company.subscription_status)
+        company.monthly_quota = int(request.POST.get('monthly_quota', company.monthly_quota) or 0)
+        company.contacts_used_this_month = int(request.POST.get('contacts_used_this_month', 0) or 0)
+        plan_id = request.POST.get('current_plan')
+        company.current_plan = Plan.objects.filter(pk=plan_id).first() if plan_id else None
+        reset_at = request.POST.get('quota_reset_at')
+        company.quota_reset_at = reset_at if reset_at else None
+        company.save()
+        messages.success(request, f'Entreprise « {company.name} » mise à jour.')
+        return redirect('dashboard:admin_companies')
+
+    company.quota_percent = min(100, (company.contacts_used_this_month / company.monthly_quota * 100) if company.monthly_quota else 0)
+    return render(request, 'dashboard/admin_company_edit.html', {'company': company, 'plans': plans})
+
+
+@login_required
+@admin_required
+def admin_company_delete(request, pk):
+    if request.method == 'POST':
+        company = get_object_or_404(Company, pk=pk)
+        name = company.name
+        company.delete()
+        messages.success(request, f'Entreprise « {name} » supprimée.')
+    return redirect('dashboard:admin_companies')
+
+
+# ── UTILISATEURS ───────────────────────────────────────────────────────────────
+
+@login_required
+@admin_required
+def admin_users(request):
+    qs = User.objects.order_by('-date_joined')
+    q = request.GET.get('q', '').strip()
+    role = request.GET.get('role', '')
+    if q:
+        qs = qs.filter(email__icontains=q)
+    if role == 'admin':
+        qs = qs.filter(is_admin=True)
+    elif role == 'company':
+        qs = qs.filter(is_company=True)
+    elif role == 'staff':
+        qs = qs.filter(is_staff=True)
+    return render(request, 'dashboard/admin_users.html', {'users': qs})
+
+
+@login_required
+@admin_required
+def admin_user_form(request, pk=None):
+    user_obj = get_object_or_404(User, pk=pk) if pk else None
+    role_fields = [
+        ('is_admin',   'Administrateur plateforme', 'amber', getattr(user_obj, 'is_admin',   False)),
+        ('is_company', 'Compte entreprise',         'blue',  getattr(user_obj, 'is_company', False)),
+        ('is_staff',   'Staff Django',              'slate', getattr(user_obj, 'is_staff',   False)),
+    ]
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        is_active  = 'is_active'  in request.POST
+        is_admin   = 'is_admin'   in request.POST
+        is_company = 'is_company' in request.POST
+        is_staff   = 'is_staff'   in request.POST
+
+        if user_obj:
+            user_obj.email = email
+            user_obj.is_active  = is_active
+            user_obj.is_admin   = is_admin
+            user_obj.is_company = is_company
+            user_obj.is_staff   = is_staff
+            if password:
+                user_obj.set_password(password)
+            user_obj.save()
+            messages.success(request, f'Utilisateur {email} mis à jour.')
+        else:
+            if User.objects.filter(email=email).exists():
+                messages.error(request, f"L'adresse {email} est déjà utilisée.")
+                return render(request, 'dashboard/admin_user_form.html',
+                              {'user_obj': None, 'role_fields': role_fields})
+            user_obj = User.objects.create_user(
+                email=email, password=password,
+                is_active=is_active, is_admin=is_admin,
+                is_company=is_company, is_staff=is_staff,
+            )
+            messages.success(request, f'Utilisateur {email} créé.')
+        return redirect('dashboard:admin_users')
+
+    return render(request, 'dashboard/admin_user_form.html',
+                  {'user_obj': user_obj, 'role_fields': role_fields})
+
+
+@login_required
+@admin_required
+def admin_user_delete(request, pk):
+    if request.method == 'POST':
+        user_obj = get_object_or_404(User, pk=pk)
+        if user_obj.is_superuser:
+            messages.error(request, 'Impossible de supprimer un superuser.')
+        else:
+            email = user_obj.email
+            user_obj.delete()
+            messages.success(request, f'Utilisateur {email} supprimé.')
+    return redirect('dashboard:admin_users')
+
+
+# ── PLANS ──────────────────────────────────────────────────────────────────────
+
+@login_required
+@admin_required
+def admin_plans(request):
+    plans = Plan.objects.prefetch_related('companies').order_by('price')
+    return render(request, 'dashboard/admin_plans.html', {'plans': plans})
+
+
+@login_required
+@admin_required
+def admin_plan_form(request, pk=None):
+    plan = get_object_or_404(Plan, pk=pk) if pk else None
+
+    if request.method == 'POST':
+        name          = request.POST.get('name', '').strip()
+        price         = request.POST.get('price', '0') or '0'
+        monthly_quota = int(request.POST.get('monthly_quota', '500') or 500)
+        stripe_id     = request.POST.get('stripe_price_id', '').strip()
+        is_active     = 'is_active' in request.POST
+        features_raw  = request.POST.get('features', '')
+        features      = [f.strip() for f in features_raw.splitlines() if f.strip()]
+
+        if plan:
+            plan.name           = name
+            plan.price          = price
+            plan.monthly_quota  = monthly_quota
+            plan.stripe_price_id = stripe_id
+            plan.is_active      = is_active
+            plan.features       = features
+            plan.save()
+            messages.success(request, f'Plan « {name} » mis à jour.')
+        else:
+            plan = Plan.objects.create(
+                name=name, price=price, monthly_quota=monthly_quota,
+                stripe_price_id=stripe_id, is_active=is_active, features=features,
+            )
+            messages.success(request, f'Plan « {name} » créé.')
+        return redirect('dashboard:admin_plans')
+
+    return render(request, 'dashboard/admin_plan_form.html', {'plan': plan})
+
+
+@login_required
+@admin_required
+def admin_plan_delete(request, pk):
+    if request.method == 'POST':
+        plan = get_object_or_404(Plan, pk=pk)
+        name = plan.name
+        plan.delete()
+        messages.success(request, f'Plan « {name} » supprimé.')
+    return redirect('dashboard:admin_plans')
+
+
+# ── TRAITEMENTS ────────────────────────────────────────────────────────────────
+
+@login_required
+@admin_required
+def admin_uploads(request):
+    qs = UploadedFile.objects.select_related('company').order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '')
+    if q:
+        qs = qs.filter(original_name__icontains=q)
+    if status:
+        qs = qs.filter(status=status)
+    return render(request, 'dashboard/admin_uploads.html', {'uploads': qs})
+
+
+@login_required
+@admin_required
+def admin_upload_delete(request, pk):
+    if request.method == 'POST':
+        upload = get_object_or_404(UploadedFile, pk=pk)
+        for field in (upload.file, upload.result_file):
+            if field and field.name and default_storage.exists(field.name):
+                default_storage.delete(field.name)
+        upload.delete()
+        messages.success(request, 'Traitement supprimé.')
+    return redirect('dashboard:admin_uploads')
+
+
+# ── HISTORIQUES ────────────────────────────────────────────────────────────────
+
+@login_required
+@admin_required
+def admin_histories(request):
+    qs = ProcessingHistory.objects.select_related('company').order_by('-created_at')
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(original_filename__icontains=q)
+    return render(request, 'dashboard/admin_histories.html',
+                  {'histories': qs, 'now': timezone.now()})
+
+
+@login_required
+@admin_required
+def admin_history_delete(request, pk):
+    if request.method == 'POST':
+        history = get_object_or_404(ProcessingHistory, pk=pk)
+        if history.export_file and history.export_file.name and default_storage.exists(history.export_file.name):
+            default_storage.delete(history.export_file.name)
+        history.delete()
+        messages.success(request, 'Historique supprimé.')
+    return redirect('dashboard:admin_histories')
 
 
 #companies details view

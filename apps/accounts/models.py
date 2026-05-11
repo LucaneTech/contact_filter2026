@@ -1,12 +1,8 @@
-"""
-Modèle User personnalisé - authentification par email.
-"""
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
 
 class UserManager(BaseUserManager):
-    """Manager pour User avec email comme identifiant."""
 
     def create_user(self, email, password=None, **extra_fields):
         if not email:

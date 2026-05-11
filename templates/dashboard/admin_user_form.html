@@ -1,0 +1,124 @@
+{% extends "dashboard/admin_base.html" %}
+{% load lucide %}
+
+{% block title %}Admin — {% if user_obj %}{{ user_obj.email }}{% else %}Nouvel utilisateur{% endif %}{% endblock %}
+
+{% block admin_breadcrumb %}
+<div class="flex items-center gap-1.5 text-sm">
+    <a href="{% url 'dashboard:admin_dashboard' %}" class="text-slate-400 hover:text-slate-700 transition-colors">Accueil</a>
+    <span class="text-slate-300">/</span>
+    <a href="{% url 'dashboard:admin_users' %}" class="text-slate-400 hover:text-slate-700 transition-colors">Utilisateurs</a>
+    <span class="text-slate-300">/</span>
+    <span class="font-semibold text-slate-900">
+        {% if user_obj %}{{ user_obj.email }}{% else %}Nouveau{% endif %}
+    </span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-slate-900 tracking-tight">
+            {% if user_obj %}Modifier l'utilisateur{% else %}Créer un utilisateur{% endif %}
+        </h2>
+        <p class="mt-1 text-sm text-slate-500">
+            {% if user_obj %}{{ user_obj.email }}{% else %}Renseigner les informations du nouveau compte{% endif %}
+        </p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+                <h3 class="text-sm font-semibold text-slate-900">Identifiants</h3>
+            </div>
+            <div class="grid gap-5 p-6 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label class="mb-2 block text-xs font-semibold text-slate-600 uppercase tracking-wide">Adresse email</label>
+                    <input type="email" name="email"
+                           value="{{ user_obj.email|default:'' }}"
+                           required
+                           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm
+                                  text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none
+                                  focus:ring-2 focus:ring-indigo-400/20 transition-all">
+                </div>
+                <div class="sm:col-span-2">
+                    {% if not user_obj %}
+                    <label class="mb-2 block text-xs font-semibold text-slate-600 uppercase tracking-wide">Mot de passe</label>
+                    <input type="password" name="password" required
+                           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm
+                                  text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none
+                                  focus:ring-2 focus:ring-indigo-400/20 transition-all">
+                    {% else %}
+                    <label class="mb-2 block text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Nouveau mot de passe
+                        <span class="font-normal text-slate-400 normal-case">(laisser vide = inchangé)</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm
+                                  text-slate-900 shadow-sm focus:border-indigo-400 focus:outline-none
+                                  focus:ring-2 focus:ring-indigo-400/20 transition-all">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-7 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+                <h3 class="text-sm font-semibold text-slate-900">Rôles & permissions</h3>
+            </div>
+            <div class="divide-y divide-slate-50">
+                {% for field, label, color, is_checked in role_fields %}
+                <label class="flex cursor-pointer items-center gap-4 px-6 py-3.5 hover:bg-slate-50/80 transition-colors">
+                    <div class="relative">
+                        <input type="checkbox" name="{{ field }}"
+                               {% if is_checked %}checked{% endif %}
+                               class="sr-only peer">
+                        <div class="h-5 w-9 rounded-full bg-slate-200 peer-checked:bg-indigo-500 transition-colors"></div>
+                        <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></div>
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">{{ label }}</span>
+                </label>
+                {% endfor %}
+                <label class="flex cursor-pointer items-center gap-4 px-6 py-3.5 hover:bg-slate-50/80 transition-colors">
+                    <div class="relative">
+                        <input type="checkbox" name="is_active"
+                               {% if not user_obj or user_obj.is_active %}checked{% endif %}
+                               class="sr-only peer">
+                        <div class="h-5 w-9 rounded-full bg-slate-200 peer-checked:bg-indigo-500 transition-colors"></div>
+                        <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></div>
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">Compte actif</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button type="submit"
+                    class="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white
+                           shadow-md shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-100">
+                {% if user_obj %}Enregistrer{% else %}Créer l'utilisateur{% endif %}
+            </button>
+            <a href="{% url 'dashboard:admin_users' %}"
+               class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold
+                      text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300">
+                Annuler
+            </a>
+            {% if user_obj and not user_obj.is_superuser %}
+            <form method="post" action="{% url 'dashboard:admin_user_delete' user_obj.pk %}" class="ml-auto"
+                  onsubmit="return confirm('Supprimer {{ user_obj.email }} définitivement ?')">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white
+                               px-5 py-2.5 text-sm font-semibold text-red-600 shadow-sm
+                               transition-all hover:bg-red-50 hover:border-red-300">
+                    {% lucide "trash-2" class="w-3.5 h-3.5" %} Supprimer
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

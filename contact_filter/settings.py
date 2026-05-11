@@ -115,6 +115,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Tailwind
 TAILWIND_APP_NAME = 'theme'
+NPM_BIN_PATH = '/home/lucane/.nvm/versions/node/v22.22.1/bin/npm'
 if DEBUG:
     INTERNAL_IPS = ['127.0.0.1']
 else:
