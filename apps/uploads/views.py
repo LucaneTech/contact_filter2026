@@ -8,11 +8,14 @@ from datetime import timedelta
 import json
 import logging
 
+from django.urls import reverse
+
 from apps.companies.models import UploadedFile
 from apps.companies.decorators import company_required
 from .forms import UploadFileForm
 from .services import detect_columns, check_quota, auto_column_mapping
 from apps.processing.tasks import process_uploaded_file
+from apps.filtering.engine import OPERATORS, NO_VALUE_OPERATORS
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -55,7 +58,7 @@ def upload_view(request):
     # GET request 
     last_uploaded_file = UploadedFile.objects.filter(
         company=company
-    ).order_by('-uploaded_at').first()
+    ).order_by('-created_at').first()
     
     context = {
         'last_uploaded_file': last_uploaded_file,
@@ -105,20 +108,12 @@ def validate_filter_config(config: dict) -> tuple[bool, str]:
                 if not field or not operator:
                     return False, "Règle incomplète: champ ou opérateur manquant"
                 
-                # Vérifier les opérateurs supportés
-                valid_operators = [
-                    'equals', 'not_equals', 'contains', 'not_contains',
-                    'startswith', 'not_startswith', 'endswith', 'in_list', 'is_empty', 
-                    'not_empty', 'regex', 'greater_than', 'less_than',
-                    'greater_or_equal', 'less_or_equal', 'between'
-                ]
-                
-                if operator not in valid_operators:
+                if operator not in OPERATORS:
                     return False, f"Opérateur invalide: {operator}"
-                
-                # Vérifier la valeur pour certains opérateurs
-                if operator not in ['is_empty', 'not_empty']:
-                    if 'value' not in rule or not rule.get('value'):
+
+                # Vérifier la valeur pour les opérateurs qui en nécessitent une
+                if operator not in NO_VALUE_OPERATORS:
+                    if 'value' not in rule or rule.get('value') is None:
                         return False, f"Valeur manquante pour l'opérateur {operator}"
         
         return True, ""
@@ -226,17 +221,13 @@ def filter_config_view(request, upload_id):
             try:
                 if settings.CELERY_BROKER_URL and 'redis' in settings.CELERY_BROKER_URL:
                     process_uploaded_file.delay(upload.pk)
-                    messages.success(request, f'Traitement lancé pour "{upload.original_name}".')
-                    messages.info(request, 'Le traitement peut prendre quelques minutes. Vous recevrez une notification une fois terminé.')
                 else:
                     process_uploaded_file(upload.pk)
-                    messages.success(request, f'Fichier "{upload.original_name}" traité.')
             except Exception as e:
                 upload.status = 'failed'
                 upload.error_message = str(e)
                 upload.save()
-                messages.error(request, f'Erreur lors du lancement: {e}')
-            
+
             return redirect('dashboard:company_dashboard')
             
         except json.JSONDecodeError as e:
@@ -268,11 +259,25 @@ def filter_config_view(request, upload_id):
 
 @login_required
 @company_required
+def upload_progress_view(request, upload_id):
+    """Page de suivi en temps réel du traitement (polling JS)."""
+    upload = get_object_or_404(UploadedFile, pk=upload_id, company=request.company)
+    return render(request, 'uploads/progress.html', {'upload': upload})
+
+
+@login_required
+@company_required
 @require_http_methods(['GET'])
 def upload_status_view(request, upload_id):
     upload = get_object_or_404(UploadedFile, pk=upload_id, company=request.company)
-    
-    # Retourner aussi la configuration pour debug
+
+    download_url = None
+    try:
+        history = upload.processing_history
+        download_url = reverse('dashboard:download_export', args=[history.pk])
+    except Exception:
+        pass
+
     return JsonResponse({
         'status': upload.status,
         'progress': upload.progress,
@@ -280,7 +285,7 @@ def upload_status_view(request, upload_id):
         'rows_after_filter': upload.rows_after_filter,
         'rows_valid_phones': upload.rows_valid_phones,
         'error_message': upload.error_message or '',
-        'filters_config': upload.filters_config,  # Pour debug
+        'download_url': download_url,
     })
 
 

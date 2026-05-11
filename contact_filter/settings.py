@@ -135,12 +135,29 @@ DEFAULT_FROM_EMAIL = '{name} <noreply@lucanefilter.com>'.format(name='Lucane Fil
 
 SITE_NAME = 'Lucane Filter'
 
+# Quota & expiration (défini avant Celery pour pouvoir être référencé dans CELERY_BEAT_SCHEDULE)
+HISTORIC_FILE_EXPIRATION_TIME = 15   # minutes
+UPLOADED_FILE_EXPIRATION_TIME = 5   # minutes
+
 # Celery
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_TIMEZONE = 'Africa/Casablanca'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+
+# Planification automatique (Celery Beat)
+# Le nettoyage s'exécute toutes les UPLOADED_FILE_EXPIRATION_TIME minutes :
+# les uploads expirent vite (10 min), les historiques après 1 jour.
+# Un seul passage couvre les deux car la requête filtre expires_at__lt=now.
+# CELERY_BEAT_SCHEDULE = {
+#     'cleanup-expired-files': {
+#         # Tâche définie dans apps/processing/tasks_cleanup.py
+#         # Découverte via autodiscover_tasks(related_name='tasks_cleanup') dans celery.py
+#         'task': 'processing.cleanup_expired_files',
+#         'schedule': UPLOADED_FILE_EXPIRATION_TIME * 60,  # secondes (600 par défaut)
+#     },
+# }
 
 # Stripe
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
@@ -149,7 +166,3 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Quota & expiration
-HISTORIC_FILE_EXPIRATION_TIME = 1
-UPLOADED_FILE_EXPIRATION_TIME = 10

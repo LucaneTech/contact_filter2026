@@ -51,7 +51,7 @@ Pour les uploads lourds :
 
 ```bash
 # Terminal 1 - Redis (si installé)
-redis-server
+
 
 # Terminal 2 - Celery worker
 celery -A contact_filter worker -l info

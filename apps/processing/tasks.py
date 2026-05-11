@@ -1,12 +1,15 @@
+import os
+import logging
+from datetime import timedelta
+
 from celery import shared_task
 from django.utils import timezone
-from datetime import timedelta
-import logging
+from django.core.files.storage import default_storage
 
-from apps.companies.models import UploadedFile, Company, ProcessingHistory
+from apps.companies.models import UploadedFile, ProcessingHistory
 from apps.filtering.engine import filter_and_score_rows, reset_cache, get_filter_stats
 from apps.exports.services import export_to_file
-from contact_filter import settings
+from django.conf import settings
 from .services import read_file_to_rows, get_standard_row
 
 logger = logging.getLogger(__name__)
@@ -172,7 +175,8 @@ def process_uploaded_file(self, upload_id: int):
         # ========== ÉTAPE 6: HISTORIQUE ==========
         logger.info("Création de l'historique...")
         
-        expires = timezone.now() + timedelta(hours=24)
+        # expires = timezone.now() + timedelta(minutes=10)
+
         
         # Préparer les données pour l'historique
         history_data = {
@@ -188,7 +192,7 @@ def process_uploaded_file(self, upload_id: int):
                     'min_score': min_score
                 }
             },
-            'expires_at': expires,
+            'expires_at': timezone.now() + timedelta(minutes=settings.HISTORIC_FILE_EXPIRATION_TIME),
             'export_file': upload.result_file,
             'export_format': export_format,
         }
@@ -272,9 +276,7 @@ def _create_empty_result_file(company_id: int, original_name: str, message: str)
     Crée un fichier de résultat vide avec un message explicatif.
     Utilisé quand aucun contact ne passe les filtres.
     """
-    import os
     from django.core.files.base import ContentFile
-    from django.core.files.storage import default_storage
     from datetime import datetime
     
     # Nettoyer le nom du fichier
@@ -304,63 +306,6 @@ def _create_empty_result_file(company_id: int, original_name: str, message: str)
         logger.error(f"Erreur création fichier vide: {e}")
         # Fallback: retourner un chemin factice
         return f"exports/company_{company_id}/empty_result_{timestamp}.txt", 'txt'
-
-
-# ============ TÂCHE DE NETTOYAGE ============
-
-@shared_task
-def cleanup_expired_files():
-    """
-    Tâche périodique pour nettoyer les fichiers expirés.
-    À exécuter via Celery Beat.
-    """
-    from django.utils import timezone
-    from datetime import timedelta
-    import os
-    
-    logger.info("Démarrage du nettoyage des fichiers expirés...")
-    
-    try:
-        # Récupérer les historiques expirés
-        expired_histories = ProcessingHistory.objects.filter(
-            expires_at__lt=timezone.now()
-        )
-        
-        count = 0
-        for history in expired_histories:
-            try:
-                # Supprimer le fichier exporté
-                if history.export_file:
-                    # Essayer de supprimer le fichier physique
-                    try:
-                        from django.core.files.storage import default_storage
-                        if default_storage.exists(history.export_file):
-                            default_storage.delete(history.export_file)
-                            logger.info(f"🗑️ Fichier supprimé: {history.export_file}")
-                    except Exception as e:
-                        logger.warning(f"Impossible de supprimer le fichier {history.export_file}: {e}")
-                
-                # Supprimer l'entrée d'historique
-                history.delete()
-                count += 1
-                
-            except Exception as e:
-                logger.error(f"Erreur lors du nettoyage de l'historique {history.id}: {e}")
-                continue
-        
-        logger.info(f"Nettoyage terminé: {count} fichiers expirés supprimés")
-        
-        return {
-            'status': 'success',
-            'deleted_count': count
-        }
-        
-    except Exception as e:
-        logger.exception(f"💥 Erreur lors du nettoyage: {e}")
-        return {
-            'status': 'error',
-            'error': str(e)
-        }
 
 
 # ============ FONCTION UTILITAIRE POUR LE DÉBOGAGE ============
@@ -413,3 +358,121 @@ def debug_filter_config(upload_id: int):
     except UploadedFile.DoesNotExist:
         print(f"Upload {upload_id} introuvable")
         return None
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+import logging
+from celery import shared_task
+from django.core.files.storage import default_storage
+from django.utils import timezone
+
+from apps.companies.models import ProcessingHistory, UploadedFile
+
+logger = logging.getLogger(__name__)
+
+
+def _delete_storage_file(field_file) -> bool:
+    if not field_file or not field_file.name:
+        return False
+    try:
+        if default_storage.exists(field_file.name):
+            default_storage.delete(field_file.name)
+            logger.debug("Fichier supprimé du stockage : %s", field_file.name)
+            return True
+    except Exception as exc:
+        logger.warning("Suppression impossible [%s] : %s", field_file.name, exc)
+    return False
+
+
+@shared_task()
+def cleanup_expired_files():
+    now = timezone.now()
+    stats = {
+        'uploads_deleted': 0,
+        'histories_deleted': 0,
+        'files_deleted': 0,
+        'errors': 0,
+    }
+
+    logger.info("Nettoyage des fichiers expirés — démarrage...")
+
+    # ── 1. UploadedFile expirés ──────────────────────────────────────────────
+    for upload in list(UploadedFile.objects.filter(expires_at__lt=now)):
+        try:
+            history = None
+            history_still_valid = False
+
+            try:
+                history = upload.processing_history
+                history_still_valid = history.expires_at is not None and history.expires_at > now
+            except ProcessingHistory.DoesNotExist:
+                pass
+
+            if history_still_valid:
+                # Détacher l'historique pour éviter le CASCADE, conserver l'export
+                history.upload = None
+                history.save(update_fields=['upload'])
+                # Supprimer uniquement le fichier uploadé brut (pas le résultat = export historique)
+                if _delete_storage_file(upload.file):
+                    stats['files_deleted'] += 1
+                logger.info(
+                    "Upload expiré détaché (historique encore valide jusqu'au %s) : %s",
+                    history.expires_at.strftime('%Y-%m-%d %H:%M'),
+                    upload.original_name,
+                )
+            else:
+                # Historique absent ou lui aussi expiré → tout supprimer
+                if history:
+                    if _delete_storage_file(history.export_file):
+                        stats['files_deleted'] += 1
+                else:
+                    # Pas d'historique lié : supprimer le result_file de l'upload
+                    if _delete_storage_file(upload.result_file):
+                        stats['files_deleted'] += 1
+                if _delete_storage_file(upload.file):
+                    stats['files_deleted'] += 1
+
+            name = upload.original_name
+            upload.delete()  # CASCADE sans risque : history déjà détaché si valide
+            stats['uploads_deleted'] += 1
+            logger.info("Upload expiré supprimé : %s", name)
+
+        except Exception as exc:
+            logger.error("Erreur suppression upload #%s : %s", upload.id, exc)
+            stats['errors'] += 1
+
+    # ── 2. ProcessingHistory expirés (orphelins ou expiration propre) ────────
+    for history in list(ProcessingHistory.objects.filter(expires_at__lt=now)):
+        try:
+            if _delete_storage_file(history.export_file):
+                stats['files_deleted'] += 1
+
+            fname = history.original_filename
+            history.delete()
+            stats['histories_deleted'] += 1
+            logger.info("Historique expiré supprimé : %s", fname)
+
+        except Exception as exc:
+            logger.error("Erreur suppression historique #%s : %s", history.id, exc)
+            stats['errors'] += 1
+
+    logger.info(
+        "Nettoyage terminé — uploads: %d, historiques: %d, fichiers: %d, erreurs: %d",
+        stats['uploads_deleted'],
+        stats['histories_deleted'],
+        stats['files_deleted'],
+        stats['errors'],
+    )
+    return {
+        'status': 'success' if stats['errors'] == 0 else 'partial',
+        **stats,
+    }

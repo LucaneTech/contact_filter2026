@@ -64,7 +64,8 @@ def count_rows(file: DjangoUploadedFile) -> int:
         if filename.endswith(('.csv', '.txt')):
             content = file.read().decode('utf-8', errors='ignore')
             file.seek(0)
-            return max(0, len(content.strip().split('\n')) - 1)
+            reader = csv.reader(io.StringIO(content))
+            return max(0, sum(1 for _ in reader) - 1)
         elif HAS_PANDAS and filename.endswith(('.xlsx', '.xls')):
             df = pd.read_excel(file)
             file.seek(0)
@@ -224,14 +225,12 @@ def get_standard_row(row: dict, columns: list, mapping: dict = None) -> dict | N
         if not value_str:
             continue
 
-        # Téléphone par longueur de chiffres
+        # Téléphone par longueur de chiffres (9-15 exclut naturellement les codes postaux à 5 chiffres)
         if 'tel' not in standard:
             digits = re.sub(r'[^\d]', '', value_str)
             if 9 <= len(digits) <= 15:
-                # Éviter de prendre un code postal (5 chiffres) comme téléphone
-                if not (len(digits) == 5 and 'code_postal' not in standard):
-                    standard['tel'] = digits
-                    logger.debug(f"  Tél heuristique : {key!r} = {digits[:20]!r}")
+                standard['tel'] = digits
+                logger.debug(f"  Tél heuristique : {key!r} = {digits[:20]!r}")
 
         # Email par présence de @
         if 'email' not in standard and '@' in value_str and '.' in value_str:

@@ -20,7 +20,7 @@ def export_to_file(
     fmt: str = 'csv',
 ) -> tuple[str, str]:
     base = Path(base_name).stem
-    date_str = timezone.now().strftime('%Y%m%d_%H%M')
+    date_str = timezone.now().strftime('%Y%m%d_%H%M%S')
     dir_path = f'exports/company_{company_id}/{timezone.now().strftime("%Y/%m/%d")}'
 
     # Export Excel

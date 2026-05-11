@@ -79,20 +79,43 @@ class FilterGroupTest(TestCase):
 class FilterAndScoreTest(TestCase):
     def test_filter_and_score_no_filters(self):
         rows = [
-            {'phone': '0612345678', 'city': 'Paris'},
-            {'phone': 'invalid', 'city': 'Lyon'},
+            {'tel': '0612345678', 'city': 'Paris'},
+            {'tel': 'invalid', 'city': 'Lyon'},
         ]
-        filtered, valid_count, _ = filter_and_score_rows(rows, {}, [])
+        filtered, valid_count, rejected = filter_and_score_rows(rows, {}, [])
         self.assertEqual(len(filtered), 2)
-        self.assertIn('phone_valid', filtered[0])
-        self.assertIn('phone_normalized', filtered[0])
+        self.assertEqual(rejected, 0)
+        # valid_count comptabilisé indépendamment de enrich
+        self.assertEqual(valid_count, 1)
+
+    def test_filter_and_score_with_enrich(self):
+        rows = [{'tel': '0612345678', 'city': 'Paris'}]
+        filtered, valid_count, _ = filter_and_score_rows(rows, {}, [], enrich=True)
+        self.assertEqual(len(filtered), 1)
+        self.assertIn('_phone_valid', filtered[0])
+        self.assertIn('_phone_normalized', filtered[0])
+        self.assertIn('_score', filtered[0])
+        self.assertTrue(filtered[0]['_phone_valid'])
+        self.assertEqual(valid_count, 1)
 
     def test_filter_by_city(self):
         rows = [
-            {'phone': '0612345678', 'city': 'Paris'},
-            {'phone': '0698765432', 'city': 'Lyon'},
+            {'tel': '0612345678', 'city': 'Paris'},
+            {'tel': '0698765432', 'city': 'Lyon'},
         ]
         filters = {'logic': 'AND', 'rules': [{'field': 'city', 'operator': 'equals', 'value': 'Paris'}]}
         filtered, _, _ = filter_and_score_rows(rows, filters, [])
         self.assertEqual(len(filtered), 1)
         self.assertEqual(filtered[0]['city'], 'Paris')
+
+    def test_not_startswith(self):
+        rows = [
+            {'tel': '0612345678', 'ville': 'Paris'},
+            {'tel': '0698765432', 'ville': 'Lyon'},
+        ]
+        filters = {'logic': 'AND', 'rules': [
+            {'field': 'ville', 'operator': 'not_startswith', 'value': 'Pa'}
+        ]}
+        filtered, _, _ = filter_and_score_rows(rows, filters, [])
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0]['ville'], 'Lyon')

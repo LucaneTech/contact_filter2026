@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% load lucide %}
+
+{% block title %}Traitement — {{ upload.original_name }}{% endblock %}
+
+{% block nav %}
+<nav class="border-b border-slate-200 bg-white sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="flex justify-between h-16 items-center">
+            <div class="flex items-center gap-4">
+                <a href="{% url 'dashboard:company_dashboard' %}"
+                   class="text-slate-500 hover:text-slate-700 transition-colors">
+                    {% lucide "arrow-left" class="w-5 h-5" %}
+                </a>
+                <span class="text-sm font-medium text-slate-700 truncate max-w-xs">
+                    {{ upload.original_name }}
+                </span>
+            </div>
+            <span id="status-badge"
+                  class="px-3 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                En cours
+            </span>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12 mt-8">
+
+    <!-- En-tête avec progression -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 id="status-title" class="text-2xl font-semibold text-slate-900">
+                    Traitement en cours…
+                </h1>
+                <p id="step-label" class="text-slate-500 mt-1 text-sm">
+                    Initialisation…
+                </p>
+            </div>
+            
+            <!-- Indicateur de statut -->
+            <div id="icon-processing" class="flex-shrink-0">
+                <div class="w-12 h-12 rounded-md bg-blue-50 border border-blue-200 
+                          flex items-center justify-center">
+                    <svg class="animate-spin w-6 h-6 text-blue-600"
+                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </div>
+            </div>
+            
+            <div id="icon-success" class="hidden flex-shrink-0">
+                <div class="w-12 h-12 rounded-md bg-emerald-50 border border-emerald-200 
+                          flex items-center justify-center">
+                    <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            </div>
+            
+            <div id="icon-error" class="hidden flex-shrink-0">
+                <div class="w-12 h-12 rounded-md bg-red-50 border border-red-200 
+                          flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barre de progression -->
+        <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Progression</span>
+                <span id="progress-text" class="font-medium text-slate-900">0%</span>
+            </div>
+            <div class="h-2 bg-slate-100 rounded-md overflow-hidden">
+                <div id="progress-bar"
+                     class="h-full bg-blue-600 rounded-md transition-all duration-500 ease-out"
+                     style="width: 0%">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cartes statistiques -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white border border-slate-200 rounded-md p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 mb-1">Contacts lus</p>
+                    <div id="stat-original" class="text-2xl font-semibold text-slate-900">—</div>
+                </div>
+                <div class="w-10 h-10 bg-blue-50 rounded-md flex items-center justify-center">
+                    {% lucide "users" class="w-5 h-5 text-blue-600" %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white border border-slate-200 rounded-md p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 mb-1">Après filtrage</p>
+                    <div id="stat-filtered" class="text-2xl font-semibold text-slate-900">—</div>
+                </div>
+                <div class="w-10 h-10 bg-amber-50 rounded-md flex items-center justify-center">
+                    {% lucide "filter" class="w-5 h-5 text-amber-600" %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white border border-slate-200 rounded-md p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-500 mb-1">Tél. valides</p>
+                    <div id="stat-phones" class="text-2xl font-semibold text-slate-900">—</div>
+                </div>
+                <div class="w-10 h-10 bg-emerald-50 rounded-md flex items-center justify-center">
+                    {% lucide "smartphone" class="w-5 h-5 text-emerald-600" %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions principales -->
+    <div id="action-buttons" class="hidden flex flex-col sm:flex-row gap-3 justify-end border-t border-slate-200 pt-6">
+        <a href="{% url 'dashboard:company_dashboard' %}"
+           class="px-4 py-2 rounded-md border border-slate-300 text-slate-700
+                  hover:bg-slate-50 transition-colors text-sm font-medium">
+            Tableau de bord
+        </a>
+        <a id="download-btn"
+           href="#"
+           class="px-4 py-2 rounded-md bg-emerald-600 text-white
+                  hover:bg-emerald-700 transition-colors text-sm font-medium
+                  flex items-center gap-2">
+            {% lucide "download" class="w-4 h-4" %}
+            Télécharger le résultat
+        </a>
+    </div>
+
+    <!-- Message d'erreur -->
+    <div id="error-block" class="hidden mt-6 rounded-md bg-red-50 border border-red-200 p-4">
+        <div class="flex items-start gap-3">
+            {% lucide "alert-triangle" class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" %}
+            <div class="flex-1">
+                <p class="text-red-800 font-medium text-sm mb-1">Erreur de traitement</p>
+                <p id="error-message" class="text-red-600 text-sm"></p>
+            </div>
+        </div>
+        <div class="mt-4 flex gap-3">
+            <a href="{% url 'uploads:filter_config' upload.id %}"
+               class="px-3 py-1.5 rounded-md bg-red-100 text-red-700 border border-red-200
+                      hover:bg-red-200 text-sm transition-colors">
+                Réessayer
+            </a>
+            <a href="{% url 'dashboard:company_dashboard' %}"
+               class="px-3 py-1.5 rounded-md border border-slate-300 text-slate-600
+                      hover:bg-slate-50 text-sm transition-colors">
+                Annuler
+            </a>
+        </div>
+    </div>
+
+    <!-- Redirection automatique -->
+    <p id="redirect-hint" class="hidden text-center text-slate-400 text-xs mt-6">
+        Redirection vers le tableau de bord dans <span id="countdown" class="font-medium">5</span> secondes...
+    </p>
+
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    const STATUS_URL    = '{% url "uploads:upload_status" upload.id %}';
+    const DASHBOARD_URL = '{% url "dashboard:company_dashboard" %}';
+
+    const STEP_LABELS = {
+        pending:    'En attente de traitement…',
+        processing: 'Lecture et normalisation des données…',
+        filtering:  'Application des filtres et calcul des scores…',
+        cleaning:   'Génération du fichier exporté…',
+        ready:      'Traitement terminé avec succès !',
+        failed:     'Le traitement a échoué.',
+        expired:    'Ce fichier a expiré.',
+    };
+
+    let pollInterval  = null;
+    let renderedPct   = 0;
+    let countdownVal  = 5;
+    let countdownTimer = null;
+    let done          = false;
+
+    function fmt(n) {
+        if (!n && n !== 0) return '—';
+        return Number(n).toLocaleString('fr-FR');
+    }
+
+    function el(id) { return document.getElementById(id); }
+
+    function setProgress(pct) {
+        if (pct <= renderedPct) return;
+        renderedPct = pct;
+        el('progress-bar').style.width = pct + '%';
+        el('progress-text').textContent = pct + '%';
+    }
+
+    function setStepLabel(status) {
+        el('step-label').textContent = STEP_LABELS[status] || 'Traitement en cours…';
+    }
+
+    function updateStats(data) {
+        if (data.rows_original !== undefined)   el('stat-original').textContent = fmt(data.rows_original);
+        if (data.rows_after_filter !== undefined) el('stat-filtered').textContent = fmt(data.rows_after_filter);
+        if (data.rows_valid_phones !== undefined) el('stat-phones').textContent  = fmt(data.rows_valid_phones);
+    }
+
+    function onReady(data) {
+        if (done) return;
+        done = true;
+        clearInterval(pollInterval);
+
+        el('icon-processing').classList.add('hidden');
+        el('icon-success').classList.remove('hidden');
+
+        el('status-title').textContent = 'Traitement terminé';
+        el('step-label').textContent = 'Le fichier est prêt à être téléchargé';
+
+        el('status-badge').textContent = 'Terminé';
+        el('status-badge').className = 'px-3 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
+
+        setProgress(100);
+        el('progress-bar').classList.remove('bg-blue-600');
+        el('progress-bar').classList.add('bg-emerald-600');
+
+        updateStats(data);
+
+        if (data.download_url) {
+            el('download-btn').href = data.download_url;
+            el('action-buttons').classList.remove('hidden');
+        } else {
+            el('download-btn').classList.add('hidden');
+            el('action-buttons').classList.remove('hidden');
+        }
+
+        el('redirect-hint').classList.remove('hidden');
+        countdownTimer = setInterval(function () {
+            countdownVal--;
+            el('countdown').textContent = countdownVal;
+            if (countdownVal <= 0) {
+                clearInterval(countdownTimer);
+                window.location.href = DASHBOARD_URL;
+            }
+        }, 1000);
+    }
+
+    function onFailed(data) {
+        if (done) return;
+        done = true;
+        clearInterval(pollInterval);
+
+        el('icon-processing').classList.add('hidden');
+        el('icon-error').classList.remove('hidden');
+
+        el('status-title').textContent = 'Échec du traitement';
+        el('status-title').classList.add('text-red-600');
+
+        el('status-badge').textContent = 'Erreur';
+        el('status-badge').className = 'px-3 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200';
+
+        el('progress-bar').classList.remove('bg-blue-600');
+        el('progress-bar').classList.add('bg-red-600');
+
+        el('error-message').textContent = data.error_message || 'Une erreur inattendue s\'est produite.';
+        el('error-block').classList.remove('hidden');
+    }
+
+    function handleResponse(data) {
+        setProgress(data.progress || 0);
+        setStepLabel(data.status);
+        updateStats(data);
+
+        if (data.status === 'ready')  { onReady(data);  return; }
+        if (data.status === 'failed') { onFailed(data); return; }
+        if (data.status === 'expired') {
+            onFailed({ error_message: 'Ce fichier a expiré avant la fin du traitement.' });
+        }
+    }
+
+    function poll() {
+        fetch(STATUS_URL, { credentials: 'same-origin' })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(handleResponse)
+            .catch(function (err) {
+                console.warn('[progress] Erreur de poll :', err);
+            });
+    }
+
+    poll();
+    pollInterval = setInterval(poll, 1500);
+
+})();
+</script>
+{% endblock %}

@@ -775,24 +775,20 @@ def filter_and_score_rows(
                 stats['score_too_low'] += 1
                 continue
 
+            # ── Validation téléphone (toujours, indépendamment de enrich) ──
+            phone_value = _resolve_field(row, phone_field, alias_map)
+            is_valid, normalized_phone = PhoneValidator.validate(phone_value, default_region)
+            if is_valid:
+                valid_phones += 1
+
             # ── Enrichissement ──
             if enrich:
-                phone_value = _resolve_field(row, phone_field, alias_map)
-                is_valid, normalized_phone = PhoneValidator.validate(phone_value, default_region)
-                if is_valid:
-                    valid_phones += 1
-
                 enriched = {
-                        **row,
-                        # '_score': score,
-                        # '_phone_valid': is_valid,
-                        # '_phone_normalized': normalized_phone if is_valid else phone_value,
-                        # '_filter_metadata': {
-                        #     'timestamp': batch_ts,
-                        #     'score': score,
-                        #     'phone_validated': is_valid,
-                        # },
-                    }
+                    **row,
+                    '_score': score,
+                    '_phone_valid': is_valid,
+                    '_phone_normalized': normalized_phone if is_valid else phone_value,
+                }
                 filtered.append(enriched)
             else:
                 filtered.append({**row})

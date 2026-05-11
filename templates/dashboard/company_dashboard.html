@@ -224,11 +224,33 @@
                     </thead>
                     <tbody>
                         {% for u in uploads %}
-                        <tr class="border-b border-slate-700/30 hover:bg-slate-700/20">
+                        <tr class="border-b border-slate-700/30 hover:bg-slate-700/20"
+                            data-upload-id="{{ u.pk }}"
+                            data-status="{{ u.status }}"
+                            data-status-url="{% url 'uploads:upload_status' u.pk %}">
                             <td class="py-3 px-4 text-slate-200 font-medium">{{ u.original_name|truncatechars:25 }}</td>
-                            <td class="py-3 px-4"><span class="px-2.5 py-1 rounded-lg text-xs font-medium {% if u.status == 'ready' %}bg-emerald-900/50 text-emerald-400{% elif u.status == 'failed' %}bg-red-900/50 text-red-400{% else %}bg-amber-900/50 text-amber-400{% endif %}">{{ u.get_status_display }}</span></td>
-                            <td class="py-3 px-4">{{ u.progress }}%</td>
-                            <td class="py-3 px-4 text-slate-400">{{ u.rows_original }} → {{ u.rows_after_filter }}</td>
+                            <td class="py-3 px-4">
+                                <span class="status-badge px-2.5 py-1 rounded-lg text-xs font-medium
+                                    {% if u.status == 'ready' %}bg-emerald-900/50 text-emerald-400
+                                    {% elif u.status == 'failed' %}bg-red-900/50 text-red-400
+                                    {% else %}bg-amber-900/50 text-amber-400{% endif %}">
+                                    {{ u.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="flex flex-col gap-1 min-w-[72px]">
+                                    <div class="h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                                        <div class="progress-bar h-full rounded-full transition-all duration-700
+                                            {% if u.status == 'ready' %}bg-linear-to-r from-emerald-600 to-emerald-400
+                                            {% elif u.status == 'failed' %}bg-linear-to-r from-red-700 to-red-500
+                                            {% else %}bg-linear-to-r from-blue-600 to-blue-400{% endif %}"
+                                            style="width: {{ u.progress }}%">
+                                        </div>
+                                    </div>
+                                    <span class="progress-text text-xs text-slate-400 font-mono">{{ u.progress }}%</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4 text-slate-400 rows-stats">{{ u.rows_original }} → {{ u.rows_after_filter }}</td>
                             <td class="py-3 px-4 text-slate-500">{{ u.created_at|date:"d/m H:i" }}</td>
                             <td class="py-3 px-4 text-slate-500">{{ u.expires_at|date:"d/m H:i" }}</td>
                         </tr>
@@ -274,7 +296,7 @@
                                 <span class="text-slate-500 ">—</span>
                             {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-slate-500">{{ p.expires_at|date:"d/m" }}</td>
+                            <td class="py-3 px-4 text-slate-500">{{ p.expires_at|date:"d/m H:i" }}</td>
                           <td class="py-3 px-4">
  
     <div class="flex flex-row gap-2 items-center text-left justify-center">
@@ -463,6 +485,89 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 5000);
 
+// ── Polling progression en temps réel ───────────────────────────────────────
+(function () {
+    'use strict';
+
+    const ACTIVE = new Set(['pending', 'processing', 'filtering', 'cleaning']);
+    const LABELS = {
+        pending:    'En attente…',
+        processing: 'Lecture…',
+        filtering:  'Filtrage…',
+        cleaning:   'Export…',
+        ready:      'Terminé',
+        failed:     'Échoué',
+        expired:    'Expiré',
+    };
+
+    function badgeClass(status) {
+        if (status === 'ready')  return 'bg-emerald-900/50 text-emerald-400';
+        if (status === 'failed') return 'bg-red-900/50 text-red-400';
+        return 'bg-amber-900/50 text-amber-400';
+    }
+
+    function barClass(status) {
+        if (status === 'ready')  return 'bg-linear-to-r from-emerald-600 to-emerald-400';
+        if (status === 'failed') return 'bg-linear-to-r from-red-700 to-red-500';
+        return 'bg-linear-to-r from-blue-600 to-blue-400';
+    }
+
+    function updateRow(row, data) {
+        const pct = data.progress || 0;
+
+        const bar = row.querySelector('.progress-bar');
+        if (bar) {
+            bar.style.width = pct + '%';
+            bar.className = 'progress-bar h-full rounded-full transition-all duration-700 ' + barClass(data.status);
+        }
+
+        const txt = row.querySelector('.progress-text');
+        if (txt) txt.textContent = pct + '%';
+
+        const badge = row.querySelector('.status-badge');
+        if (badge) {
+            badge.textContent = LABELS[data.status] || data.status;
+            badge.className = 'status-badge px-2.5 py-1 rounded-lg text-xs font-medium ' + badgeClass(data.status);
+        }
+
+        if (data.rows_original > 0) {
+            const stats = row.querySelector('.rows-stats');
+            if (stats) stats.textContent = data.rows_original + ' → ' + (data.rows_after_filter || '…');
+        }
+
+        row.dataset.status = data.status;
+    }
+
+    const pollers = new Map();
+
+    function startPolling(row) {
+        const id  = row.dataset.uploadId;
+        const url = row.dataset.statusUrl;
+
+        function poll() {
+            fetch(url, { credentials: 'same-origin' })
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(data => {
+                    updateRow(row, data);
+                    if (!ACTIVE.has(data.status)) {
+                        clearInterval(pollers.get(id));
+                        pollers.delete(id);
+                        if (data.status === 'ready') {
+                            setTimeout(() => window.location.reload(), 1800);
+                        }
+                    }
+                })
+                .catch(err => console.warn('[dashboard poll #' + id + ']', err));
+        }
+
+        poll();
+        pollers.set(id, setInterval(poll, 1500));
+    }
+
+    document.querySelectorAll('tr[data-upload-id]').forEach(row => {
+        if (ACTIVE.has(row.dataset.status)) startPolling(row);
+    });
+}());
 </script>
 {% endblock %}
 
