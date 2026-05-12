@@ -1,11 +1,32 @@
 services:
   redis:
-    image: redis
+    image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  worker:
+    image: python:3.13-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      # Depuis le container, Redis s'appelle "redis" (pas localhost)
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: "False"
+    command: >
+      sh -c "pip install -r requirements.txt --quiet &&
+             celery -A contact_filter worker --loglevel=info --concurrency=2"
+    depends_on:
+      - redis
+
   redis-commander:
     image: rediscommander/redis-commander
     ports:
       - "8081:8081"
     environment:
       - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
