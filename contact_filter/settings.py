@@ -123,7 +123,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 _s3_endpoint = os.getenv('AWS_S3_ENDPOINT_URL')
 
 if DEBUG:
-    # Local : stockage filesystem Django par défaut, rien à configurer
     pass
 elif _s3_endpoint:
     # Production avec bucket Railway (S3-compatible)
@@ -142,6 +141,9 @@ elif _s3_endpoint:
 else:
     # Production sans bucket (fallback filesystem — déconseillé sur Railway)
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Désactive la vérification stricte des fichiers référencés (jazzmin référence des .map manquants)
+WHITENOISE_MANIFEST_STRICT = False
 
 # Tailwind
 TAILWIND_APP_NAME = 'theme'
@@ -180,9 +182,9 @@ CELERY_TASK_SERIALIZER = 'json'
 
 
 # Stripe
-STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
-STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
-STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+# STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
+# STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+# STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
