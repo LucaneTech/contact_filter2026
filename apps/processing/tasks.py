@@ -44,8 +44,8 @@ def process_uploaded_file(self, upload_id: int):
         if not rows:
             raise ValueError('Aucune donnée trouvée dans le fichier.')
         
-        logger.info(f"{len(rows)} lignes lues, {len(columns)} colonnes")
-        
+        logger.info(f"{len(rows)} lignes lues, colonnes: {columns}")
+
         # ========== ÉTAPE 2: MAPPING DES COLONNES ==========
         logger.info("Mapping des colonnes...")
         
@@ -71,7 +71,9 @@ def process_uploaded_file(self, upload_id: int):
         if not standard_rows:
             raise ValueError('Aucune ligne valide après mapping.')
         
-        logger.info(f"{len(standard_rows)} lignes après mapping")
+        logger.info(f"{len(standard_rows)} lignes après mapping — mapping utilisé: {mapping}")
+        if standard_rows:
+            logger.info(f"Exemple première ligne standard: {standard_rows[0]}")
         
         # ========== ÉTAPE 3: PRÉPARATION DES CONFIGURATIONS ==========
         upload.status = 'filtering'
@@ -107,6 +109,8 @@ def process_uploaded_file(self, upload_id: int):
         if 'scoring' in filters_config:
             filters_config = {k: v for k, v in filters_config.items() if k != 'scoring'}
         
+        import json as _json
+        logger.info(f"filters_config complet: {_json.dumps(filters_config, ensure_ascii=False, default=str)}")
         logger.info(f"Configuration: {len(filters_config.get('rules', []))} règles de filtre, "
                    f"{len(scoring_rules)} règles de scoring, score min={min_score}")
         
