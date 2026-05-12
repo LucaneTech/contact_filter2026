@@ -28,12 +28,32 @@ def login_view(request):
 @login_required
 def profile_view(request):
     user = request.user
-    company = Company.objects.filter(user=user).first()
+    company = Company.objects.select_related('current_plan').filter(user=user).first()
     if not company:
         messages.warning(request, 'Aucune entreprise associée à votre compte. Veuillez contacter le support.')
         return redirect('accounts:login')
+
+    uploads_qs = company.uploads.all()
+    processings_qs = company.processings.all()
+
+    total_uploads = uploads_qs.count()
+    total_exports = processings_qs.count()
+    total_contacts_processed = sum(
+        p.rows_after_filter for p in processings_qs.only('rows_after_filter')
+    )
+    total_valid_phones = sum(
+        p.rows_valid_phones for p in processings_qs.only('rows_valid_phones')
+    )
+    quota_percent = min(100, (company.contacts_used_this_month / company.monthly_quota * 100)
+                        if company.monthly_quota else 0)
+
     context = {
         'user': user,
         'company': company,
+        'total_uploads': total_uploads,
+        'total_exports': total_exports,
+        'total_contacts_processed': total_contacts_processed,
+        'total_valid_phones': total_valid_phones,
+        'quota_percent': quota_percent,
     }
     return render(request, 'accounts/profile.html', context)
