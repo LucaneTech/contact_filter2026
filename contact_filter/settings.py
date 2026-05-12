@@ -9,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = [o for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o]
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -47,7 +48,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.companies.middleware.CompanyMiddleware',
-    'django_browser_reload.middleware.BrowserReloadMiddleware',
+    *([] if not DEBUG else ['django_browser_reload.middleware.BrowserReloadMiddleware']),
 ]
 
 ROOT_URLCONF = 'contact_filter.urls'
@@ -104,14 +105,38 @@ LOGIN_REDIRECT_URL = 'dashboard:company_dashboard'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 LOGIN_URL = 'accounts:login'
 PASSWORD_RESET_TIMEOUT = 3600
+
+
+
 # Static & Media
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'theme' / 'static'] if (BASE_DIR / 'theme' / 'static').exists() else []
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Active en prod après collectstatic
-
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+_s3_endpoint = os.getenv('AWS_ENDPOINT_URL_S3')
+
+if DEBUG:
+    # Local : stockage filesystem Django par défaut, rien à configurer
+    pass
+elif _s3_endpoint:
+    # Production avec bucket Railway (S3-compatible)
+    STORAGES = {
+        'default': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
+        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+    }
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = _s3_endpoint
+    AWS_S3_REGION_NAME = os.getenv('AWS_REGION', 'auto')
+    AWS_DEFAULT_ACL = 'private'
+    AWS_S3_FILE_OVERWRITE = False
+    MEDIA_URL = f"{_s3_endpoint}/{os.getenv('AWS_BUCKET_NAME')}/"
+else:
+    # Production sans bucket (fallback filesystem — déconseillé sur Railway)
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Tailwind
 TAILWIND_APP_NAME = 'theme'
@@ -147,18 +172,7 @@ CELERY_TIMEZONE = 'Africa/Casablanca'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
-# Planification automatique (Celery Beat)
-# Le nettoyage s'exécute toutes les UPLOADED_FILE_EXPIRATION_TIME minutes :
-# les uploads expirent vite (10 min), les historiques après 1 jour.
-# Un seul passage couvre les deux car la requête filtre expires_at__lt=now.
-# CELERY_BEAT_SCHEDULE = {
-#     'cleanup-expired-files': {
-#         # Tâche définie dans apps/processing/tasks_cleanup.py
-#         # Découverte via autodiscover_tasks(related_name='tasks_cleanup') dans celery.py
-#         'task': 'processing.cleanup_expired_files',
-#         'schedule': UPLOADED_FILE_EXPIRATION_TIME * 60,  # secondes (600 par défaut)
-#     },
-# }
+
 
 # Stripe
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')

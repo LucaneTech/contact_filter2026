@@ -1,15 +1,24 @@
 # CallFilter Pro
 
-Application web pour centres d'appel : upload de contacts, filtrage dynamique, validation téléphonique, export.
+Application web Django pour centres d'appel : import de fichiers contacts, filtrage dynamique, validation téléphonique et export — avec gestion multi-entreprises, quotas et abonnements.
+
+## Stack technique
+
+- **Backend** : Django 6.0.3, Celery, Redis
+- **Base de données** : SQLite (dev) / PostgreSQL (prod)
+- **Frontend** : Tailwind CSS, django-lucide, django-jazzmin (admin)
+- **Traitement données** : pandas, numpy, openpyxl, phonenumbers
+- **Paiement** : Stripe
+- **Infra dev** : Docker Compose (Redis + Redis Commander)
 
 ## Installation
 
 ### 1. Environnement virtuel
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# ou .venv\Scripts\activate  # Windows
+python -m venv env
+source env/bin/activate        # Linux/Mac
+# ou env\Scripts\activate      # Windows
 ```
 
 ### 2. Dépendances
@@ -23,7 +32,7 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Éditer .env selon votre configuration
-# Pour dev local : laisser USE_SQLITE vide ou True, pas besoin de PostgreSQL
+# En dev local : laisser USE_SQLITE=True, PostgreSQL non requis
 ```
 
 ### 4. Base de données
@@ -33,7 +42,7 @@ python manage.py migrate
 python manage.py setup_demo
 ```
 
-Cela crée :
+Crée les comptes de démo :
 - Admin : `admin@callfilter.local` / `admin123`
 - Entreprise : `company@callfilter.local` / `admin123`
 
@@ -45,34 +54,43 @@ python manage.py runserver
 
 Accès : http://localhost:8000
 
-## Traitement asynchrone (Celery)
+## Traitement asynchrone (Celery + Redis)
 
-Pour les uploads lourds :
+Nécessaire pour les uploads volumineux. Sans Redis, le traitement s'exécute en synchrone.
 
 ```bash
-# Terminal 1 - Redis (si installé)
+# Terminal 1 — Redis via Docker
+docker compose up redis
 
-
-# Terminal 2 - Celery worker
+# Terminal 2 — Celery worker
 celery -A contact_filter worker -l info
 
-# Terminal 3 - Celery Beat (nettoyage quotidien)
+# Terminal 3 — Celery Beat (nettoyage planifié)
 celery -A contact_filter beat -l info
 ```
 
-Sans Redis : le traitement s'exécute en synchrone (bloquant).
+Redis Commander (interface web) disponible sur http://localhost:8081 après `docker compose up`.
 
-## Structure
+## Fonctionnalités
 
-- `apps/accounts` - Auth par email, User personnalisé
-- `apps/companies` - Multi-tenant, Company, UploadedFile, ProcessingHistory
-- `apps/billing` - Plans, quotas
-- `apps/uploads` - Upload, détection colonnes
-- `apps/filtering` - Moteur de filtres, validation téléphonique
-- `apps/processing` - Tâches Celery
-- `apps/exports` - Export CSV/Excel
-- `apps/dashboard` - Dashboards entreprise et admin
+- **Import** : CSV, Excel (.xlsx, .xls), TXT — détection et mapping automatique des colonnes (téléphone, email, nom…)
+- **Filtrage** : moteur de règles dynamiques par colonne et valeur
+- **Validation téléphonique** : normalisation et vérification des numéros via `phonenumbers`
+- **Export** : CSV et Excel des contacts filtrés
+- **Multi-tenant** : isolation des données par entreprise
+- **Billing** : plans d'abonnement avec quotas mensuels de contacts et intégration Stripe
+- **Dashboard** : vues séparées entreprise et administrateur
+- **Admin** : interface Jazzmin avec historique des traitements
 
-## Formats supportés
+## Structure des apps
 
-CSV, Excel (.xlsx, .xls), TXT. Mapping automatique des colonnes (téléphone, email, nom, etc.).
+| App | Rôle |
+|-----|------|
+| `apps/accounts` | Authentification par email, modèle User personnalisé |
+| `apps/companies` | Multi-tenant, Company, UploadedFile, historique |
+| `apps/billing` | Plans, quotas mensuels, intégration Stripe |
+| `apps/uploads` | Upload de fichiers, détection de colonnes |
+| `apps/filtering` | Moteur de filtres et règles de validation |
+| `apps/processing` | Tâches Celery pour le traitement asynchrone |
+| `apps/exports` | Génération des exports CSV/Excel |
+| `apps/dashboard` | Dashboards entreprise et admin |
