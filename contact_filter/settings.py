@@ -134,11 +134,11 @@ elif _s3_endpoint:
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = _s3_endpoint
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
     AWS_S3_REGION_NAME = os.getenv('AWS_REGION', 'auto')
     AWS_DEFAULT_ACL = 'private'
     AWS_S3_FILE_OVERWRITE = False
-    MEDIA_URL = f"{_s3_endpoint}/{os.getenv('AWS_BUCKET_NAME')}/"
+    MEDIA_URL = f"{os.getenv('AWS_S3_ENDPOINT_URL')}/{os.getenv('AWS_BUCKET_NAME')}/"
 else:
     # Production sans bucket (fallback filesystem — déconseillé sur Railway)
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
