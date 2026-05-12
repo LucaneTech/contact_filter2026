@@ -1,8 +1,9 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --noinput"
 
 [deploy]
+preDeployCommand = "python manage.py migrate"
 startCommand = "gunicorn contact_filter.wsgi --bind 0.0.0.0:$PORT --workers 2 --log-file -"
 healthcheckPath = "/accounts/login/"
 restartPolicyType = "ON_FAILURE"
