@@ -17,7 +17,7 @@ if not DEBUG:
     USE_X_FORWARDED_HOST = True
 
 INSTALLED_APPS = [
-    'jazzmin',
+    # 'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
