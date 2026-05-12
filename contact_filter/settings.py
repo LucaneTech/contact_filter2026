@@ -128,7 +128,7 @@ elif _s3_endpoint:
     # Production avec bucket Railway (S3-compatible)
     STORAGES = {
         'default': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
-        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+        'staticfiles': {'BACKEND': 'contact_filter.storage.RelaxedManifestStaticFilesStorage'},
     }
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
@@ -140,10 +140,7 @@ elif _s3_endpoint:
     MEDIA_URL = f"{_s3_endpoint}/{os.getenv('AWS_STORAGE_BUCKET_NAME')}/"
 else:
     # Production sans bucket (fallback filesystem — déconseillé sur Railway)
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Désactive la vérification stricte des fichiers référencés (jazzmin référence des .map manquants)
-WHITENOISE_MANIFEST_STRICT = False
+    STATICFILES_STORAGE = 'contact_filter.storage.RelaxedManifestStaticFilesStorage'
 
 # Tailwind
 TAILWIND_APP_NAME = 'theme'
